@@ -240,18 +240,28 @@ export async function getAllComplaints(): Promise<SubmittedComplaintRecord[]> {
     if (key) recordMap.set(key, rec);
   });
 
-  // Merge supabase records (Supabase is single source of truth for cloud sync)
+  // Merge supabase records (Supabase is single source of truth for cloud sync, but preserves local status updates if cloud is pending)
   supabaseRecords.forEach((rec) => {
     const key = (rec.complaintNumber || rec.id).trim().toLowerCase();
     if (key) {
       const existing = recordMap.get(key);
       if (existing) {
-        // Supabase status is canonical for multi-device sync
+        // If local record had an updated status (Under Review/Resolved) while Supabase has Pending, retain updated status
+        const preferredStatus =
+          existing.status !== 'Pending' && rec.status === 'Pending'
+            ? existing.status
+            : (rec.status || existing.status);
+
         recordMap.set(key, {
           ...existing,
           ...rec,
-          status: rec.status || existing.status,
+          status: preferredStatus,
         });
+
+        // Background sync to Supabase if local status was ahead of Supabase
+        if (existing.status !== 'Pending' && rec.status === 'Pending') {
+          updateComplaintStatus(existing.id, existing.status, existing.complaintNumber).catch(() => {});
+        }
       } else {
         recordMap.set(key, rec);
       }
