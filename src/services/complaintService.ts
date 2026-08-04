@@ -240,28 +240,18 @@ export async function getAllComplaints(): Promise<SubmittedComplaintRecord[]> {
     if (key) recordMap.set(key, rec);
   });
 
-  // Merge supabase records (Supabase is single source of truth for cloud sync, but preserves local status updates if cloud is pending)
+  // Merge Supabase records (Supabase is single source of truth for all devices)
   supabaseRecords.forEach((rec) => {
     const key = (rec.complaintNumber || rec.id).trim().toLowerCase();
     if (key) {
       const existing = recordMap.get(key);
       if (existing) {
-        // If local record had an updated status (Under Review/Resolved) while Supabase has Pending, retain updated status
-        const preferredStatus =
-          existing.status !== 'Pending' && rec.status === 'Pending'
-            ? existing.status
-            : (rec.status || existing.status);
-
         recordMap.set(key, {
           ...existing,
           ...rec,
-          status: preferredStatus,
+          // Supabase database status takes absolute priority for cloud sync across devices
+          status: rec.status || existing.status,
         });
-
-        // Background sync to Supabase if local status was ahead of Supabase
-        if (existing.status !== 'Pending' && rec.status === 'Pending') {
-          updateComplaintStatus(existing.id, existing.status, existing.complaintNumber).catch(() => {});
-        }
       } else {
         recordMap.set(key, rec);
       }
@@ -297,6 +287,9 @@ export async function updateComplaintStatus(
   const rawCompNum = (complaintNumber || id).trim();
   const cleanCompNum = rawCompNum.replace(/^#/, '').trim();
   const hashCompNum = cleanCompNum ? `#${cleanCompNum}` : rawCompNum;
+  const digitsOnly = cleanCompNum.replace(/[^\d]/g, '');
+
+  console.log(`[updateComplaintStatus] Updating status to "${newStatus}" for complaint "${rawCompNum}" (id: "${id}")`);
 
   // 1. Update in Supabase
   if (supabase) {
@@ -311,7 +304,10 @@ export async function updateComplaintStatus(
           .eq('complaint_number', cleanCompNum)
           .select();
 
-        if (!error && data && data.length > 0) {
+        if (error) {
+          console.warn('[updateComplaintStatus] Strategy A error:', error.message);
+        } else if (data && data.length > 0) {
+          console.log('[updateComplaintStatus] Strategy A succeeded:', data.length, 'row(s)');
           updatedCount += data.length;
         }
       }
@@ -324,45 +320,77 @@ export async function updateComplaintStatus(
           .eq('complaint_number', hashCompNum)
           .select();
 
-        if (!error && data && data.length > 0) {
+        if (error) {
+          console.warn('[updateComplaintStatus] Strategy B error:', error.message);
+        } else if (data && data.length > 0) {
+          console.log('[updateComplaintStatus] Strategy B succeeded:', data.length, 'row(s)');
           updatedCount += data.length;
         }
       }
 
       // Strategy C: Update by numeric ID
       const numId = parseInt(id, 10);
-      if (!isNaN(numId) && numId > 0) {
+      if (updatedCount === 0 && !isNaN(numId) && numId > 0 && String(numId) === id.trim()) {
         const { data, error } = await supabase
           .from('Complaints')
           .update({ status: newStatus })
           .eq('id', numId)
           .select();
 
-        if (!error && data && data.length > 0) {
+        if (error) {
+          console.warn('[updateComplaintStatus] Strategy C error:', error.message);
+        } else if (data && data.length > 0) {
+          console.log('[updateComplaintStatus] Strategy C succeeded:', data.length, 'row(s)');
           updatedCount += data.length;
         }
       }
 
-      // Strategy D: Update by string ID
-      if (id) {
+      // Strategy D: Update by string ID (only if not a local dummy id like comp_123)
+      if (updatedCount === 0 && id && !id.startsWith('comp_')) {
         const { data, error } = await supabase
           .from('Complaints')
           .update({ status: newStatus })
           .eq('id', id)
           .select();
 
-        if (!error && data && data.length > 0) {
+        if (error) {
+          console.warn('[updateComplaintStatus] Strategy D error:', error.message);
+        } else if (data && data.length > 0) {
+          console.log('[updateComplaintStatus] Strategy D succeeded:', data.length, 'row(s)');
           updatedCount += data.length;
         }
       }
 
       // Strategy E: Case-insensitive / ilike wildcard fallback (e.g., %162327%)
-      const digitsOnly = cleanCompNum.replace(/[^\d]/g, '');
-      if (updatedCount === 0 && digitsOnly.length >= 5) {
-        await supabase
+      if (updatedCount === 0 && digitsOnly && digitsOnly.length >= 5) {
+        const { data, error } = await supabase
           .from('Complaints')
           .update({ status: newStatus })
-          .ilike('complaint_number', `%${digitsOnly}%`);
+          .ilike('complaint_number', `%${digitsOnly}%`)
+          .select();
+
+        if (error) {
+          console.warn('[updateComplaintStatus] Strategy E error:', error.message);
+        } else if (data && data.length > 0) {
+          console.log('[updateComplaintStatus] Strategy E succeeded:', data.length, 'row(s)');
+          updatedCount += data.length;
+        }
+      }
+
+      // Strategy F: Update without .select() in case RLS/PostgREST blocks select on update
+      if (updatedCount === 0) {
+        if (cleanCompNum) {
+          const { error } = await supabase
+            .from('Complaints')
+            .update({ status: newStatus })
+            .eq('complaint_number', cleanCompNum);
+
+          if (error) {
+            console.warn('[updateComplaintStatus] Strategy F error:', error.message);
+          } else {
+            console.log('[updateComplaintStatus] Strategy F executed without select');
+          }
+        }
       }
     } catch (err) {
       console.warn('Error updating status in Supabase:', err);
@@ -381,7 +409,8 @@ export async function updateComplaintStatus(
           rec.complaintNumber === rawCompNum ||
           rec.complaintNumber === cleanCompNum ||
           rec.complaintNumber === hashCompNum ||
-          (complaintNumber && rec.complaintNumber === complaintNumber);
+          (complaintNumber && rec.complaintNumber === complaintNumber) ||
+          (digitsOnly && digitsOnly.length >= 5 && rec.complaintNumber?.includes(digitsOnly));
         return matches ? { ...rec, status: newStatus } : rec;
       });
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
