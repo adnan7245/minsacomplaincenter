@@ -26,15 +26,8 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({ isOpen, onClos
       setPassword('');
       onSuccess();
     } else {
-      setError('غلط یوزر نیم یا پاس ورڈ! (Username: admin | Password: Danijutt7245@)');
+      setError('غلط یوزر نیم یا پاس ورڈ!');
     }
-  };
-
-  const handleAutoFillAndLogin = () => {
-    setUsername('admin');
-    setPassword('Danijutt7245@');
-    setError('');
-    onSuccess();
   };
 
   return (
@@ -115,21 +108,13 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({ isOpen, onClos
             {error && <p className="text-xs text-rose-600 mt-1.5 font-medium">{error}</p>}
           </div>
 
-          <div className="pt-2 space-y-2">
+          <div className="pt-2">
             <button
               type="submit"
               className="w-full py-2.5 px-4 bg-[#6d4c41] hover:bg-[#5d4037] text-white text-sm font-semibold rounded-xl shadow-sm transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer"
             >
               <ShieldCheck className="w-4 h-4" />
               <span>Unlock Admin Panel</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={handleAutoFillAndLogin}
-              className="w-full py-2 px-4 bg-[#f4ece4] hover:bg-[#eee3d8] text-[#6d4c41] text-xs font-medium rounded-xl border border-[#d7ccc8] transition-colors"
-            >
-              ⚡ Quick Auto-Fill Login (admin / Danijutt7245@)
             </button>
           </div>
         </form>
