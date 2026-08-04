@@ -386,9 +386,29 @@ export async function updateComplaintStatus(
             .eq('complaint_number', cleanCompNum);
 
           if (error) {
-            console.warn('[updateComplaintStatus] Strategy F error:', error.message);
+            console.warn('[updateComplaintStatus] Strategy F1 error:', error.message);
           } else {
-            console.log('[updateComplaintStatus] Strategy F executed without select');
+            console.log('[updateComplaintStatus] Strategy F1 executed without select');
+          }
+        }
+        if (hashCompNum) {
+          const { error } = await supabase
+            .from('Complaints')
+            .update({ status: newStatus })
+            .eq('complaint_number', hashCompNum);
+
+          if (error) {
+            console.warn('[updateComplaintStatus] Strategy F2 error:', error.message);
+          }
+        }
+        if (id && !id.startsWith('comp_')) {
+          const { error } = await supabase
+            .from('Complaints')
+            .update({ status: newStatus })
+            .eq('id', id);
+
+          if (error) {
+            console.warn('[updateComplaintStatus] Strategy F3 error:', error.message);
           }
         }
       }

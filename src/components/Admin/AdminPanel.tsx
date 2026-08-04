@@ -106,6 +106,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, onSettingsUpdat
 
   const [isUpdatingStatusId, setIsUpdatingStatusId] = useState<string | null>(null);
   const [statusSaveNotification, setStatusSaveNotification] = useState<string | null>(null);
+  const [selectedStatuses, setSelectedStatuses] = useState<Record<string, 'Pending' | 'Under Review' | 'Resolved'>>({});
 
   // Status Update Handler
   const handleStatusChange = async (
@@ -124,6 +125,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, onSettingsUpdat
       )
     );
 
+    setSelectedStatuses((prev) => ({ ...prev, [id]: newStatus }));
+
     if (
       selectedComplaint &&
       (selectedComplaint.id === id ||
@@ -135,9 +138,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, onSettingsUpdat
 
     setIsUpdatingStatusId(null);
     setStatusSaveNotification(
-      `✓ Status for complaint #${complaintNumber || id} saved successfully as "${newStatus}"!`
+      `✓ Database (Complaints table) mein complaint #${complaintNumber || id} ka status "${newStatus}" save ho gaya hai!`
     );
-    setTimeout(() => setStatusSaveNotification(null), 3500);
+    setTimeout(() => setStatusSaveNotification(null), 4000);
   };
 
   // Delete Complaint Handler
@@ -371,24 +374,21 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, onSettingsUpdat
                         </span>
                       </div>
 
-                      {/* Status Selector */}
-                      <div className="flex items-center gap-2">
+                      {/* Status Selector + Update Button */}
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-[11px] font-semibold text-[#8d7b6d]">Status:</span>
-                        <div className="relative flex items-center">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <select
-                            value={c.status}
+                            value={selectedStatuses[c.id] || c.status}
                             disabled={isUpdatingStatusId === c.id}
-                            onChange={(e) =>
-                              handleStatusChange(
-                                c.id,
-                                e.target.value as 'Pending' | 'Under Review' | 'Resolved',
-                                c.complaintNumber
-                              )
-                            }
-                            className={`text-xs font-bold px-2.5 py-1 rounded-lg border outline-hidden cursor-pointer transition-colors ${
-                              c.status === 'Resolved'
+                            onChange={(e) => {
+                              const val = e.target.value as 'Pending' | 'Under Review' | 'Resolved';
+                              setSelectedStatuses((prev) => ({ ...prev, [c.id]: val }));
+                            }}
+                            className={`text-xs font-bold px-2.5 py-1.5 rounded-lg border outline-hidden cursor-pointer transition-colors ${
+                              (selectedStatuses[c.id] || c.status) === 'Resolved'
                                 ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
-                                : c.status === 'Under Review'
+                                : (selectedStatuses[c.id] || c.status) === 'Under Review'
                                 ? 'bg-amber-50 text-amber-800 border-amber-300'
                                 : 'bg-rose-50 text-rose-800 border-rose-300'
                             }`}
@@ -397,9 +397,38 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, onSettingsUpdat
                             <option value="Under Review">Under Review (جائزہ لیا جا رہا ہے)</option>
                             <option value="Resolved">Resolved (حل ہو چکا ہے)</option>
                           </select>
-                          {isUpdatingStatusId === c.id && (
-                            <RefreshCw className="w-3.5 h-3.5 animate-spin ml-1.5 text-[#6d4c41]" />
-                          )}
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleStatusChange(
+                                c.id,
+                                selectedStatuses[c.id] || c.status,
+                                c.complaintNumber
+                              )
+                            }
+                            disabled={isUpdatingStatusId === c.id}
+                            title="Click to update status in database"
+                            className={`px-3 py-1.5 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all shadow-xs cursor-pointer border ${
+                              isUpdatingStatusId === c.id
+                                ? 'bg-gray-400 text-white cursor-wait border-gray-400'
+                                : (selectedStatuses[c.id] && selectedStatuses[c.id] !== c.status)
+                                ? 'bg-[#6d4c41] hover:bg-[#5a3e35] text-white border-[#5a3e35] ring-2 ring-[#a67c52]/40 animate-pulse'
+                                : 'bg-[#8d7b6d] hover:bg-[#6d4c41] text-white border-[#6d4c41]'
+                            }`}
+                          >
+                            {isUpdatingStatusId === c.id ? (
+                              <>
+                                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                <span>Updating...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Save className="w-3.5 h-3.5" />
+                                <span>Update (آپڈیٹ کریں)</span>
+                              </>
+                            )}
+                          </button>
                         </div>
                       </div>
                     </div>

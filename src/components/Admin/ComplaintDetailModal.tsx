@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
-import { X, Phone, MapPin, Calendar, Hash, FileText, CheckCircle2, Clock, AlertCircle, Image as ImageIcon } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Phone, MapPin, Calendar, Hash, FileText, CheckCircle2, Clock, AlertCircle, Image as ImageIcon, Save, RefreshCw } from 'lucide-react';
 import { SubmittedComplaintRecord, StoreSettings } from '../../types';
 
 interface ComplaintDetailModalProps {
   complaint: SubmittedComplaintRecord | null;
   settings: StoreSettings;
   onClose: () => void;
-  onUpdateStatus: (id: string, status: 'Pending' | 'Under Review' | 'Resolved', complaintNumber?: string) => void;
+  onUpdateStatus: (id: string, status: 'Pending' | 'Under Review' | 'Resolved', complaintNumber?: string) => Promise<void> | void;
 }
 
 export const ComplaintDetailModal: React.FC<ComplaintDetailModalProps> = ({
@@ -16,8 +16,32 @@ export const ComplaintDetailModal: React.FC<ComplaintDetailModalProps> = ({
   onUpdateStatus,
 }) => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [pendingStatus, setPendingStatus] = useState<'Pending' | 'Under Review' | 'Resolved'>('Pending');
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccessMsg, setSaveSuccessMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (complaint) {
+      setPendingStatus(complaint.status);
+      setSaveSuccessMsg(null);
+    }
+  }, [complaint]);
 
   if (!complaint) return null;
+
+  const handleSaveStatus = async () => {
+    setIsSaving(true);
+    setSaveSuccessMsg(null);
+    try {
+      await onUpdateStatus(complaint.id, pendingStatus, complaint.complaintNumber);
+      setSaveSuccessMsg(`✓ Database (Complaints table) mein status successfully update ho gaya as "${pendingStatus}"!`);
+      setTimeout(() => setSaveSuccessMsg(null), 4000);
+    } catch (err) {
+      console.error('Error saving status from modal:', err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
@@ -56,45 +80,86 @@ export const ComplaintDetailModal: React.FC<ComplaintDetailModalProps> = ({
         </div>
 
         {/* Quick Status Update Bar */}
-        <div className="bg-[#fdfaf8] p-4 rounded-xl border border-[#eee3d8] mb-6 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="text-xs font-semibold text-[#6d4c41]">
-            Update Complaint Status (حالت تبدیل کریں):
+        <div className="bg-[#fdfaf8] p-4 rounded-xl border border-[#eee3d8] mb-6 flex flex-col gap-3">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="text-xs font-bold text-[#6d4c41]">
+              Select Status (اسٹیٹس منتخب کریں):
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={() => setPendingStatus('Pending')}
+                className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+                  pendingStatus === 'Pending'
+                    ? 'bg-rose-600 text-white shadow-xs ring-2 ring-rose-400/50'
+                    : 'bg-white text-rose-700 border border-rose-200 hover:bg-rose-50'
+                }`}
+              >
+                <Clock className="w-3.5 h-3.5 inline mr-1" />
+                Pending (زیرِ التوا)
+              </button>
+              <button
+                type="button"
+                onClick={() => setPendingStatus('Under Review')}
+                className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+                  pendingStatus === 'Under Review'
+                    ? 'bg-amber-600 text-white shadow-xs ring-2 ring-amber-400/50'
+                    : 'bg-white text-amber-700 border border-amber-200 hover:bg-amber-50'
+                }`}
+              >
+                <AlertCircle className="w-3.5 h-3.5 inline mr-1" />
+                Under Review (جائزہ لیا جا رہا ہے)
+              </button>
+              <button
+                type="button"
+                onClick={() => setPendingStatus('Resolved')}
+                className={`px-3.5 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+                  pendingStatus === 'Resolved'
+                    ? 'bg-emerald-600 text-white shadow-xs ring-2 ring-emerald-400/50'
+                    : 'bg-white text-emerald-700 border border-emerald-200 hover:bg-emerald-50'
+                }`}
+              >
+                <CheckCircle2 className="w-3.5 h-3.5 inline mr-1" />
+                Resolved (حل ہو چکا ہے)
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
+
+          <div className="flex items-center justify-between border-t border-[#eee3d8] pt-3 flex-wrap gap-2">
+            <div className="text-xs text-[#8d7b6d]">
+              Current Database Status: <span className="font-bold text-[#4a423d]">{complaint.status}</span>
+            </div>
+
             <button
-              onClick={() => onUpdateStatus(complaint.id, 'Pending', complaint.complaintNumber)}
-              className={`px-3.5 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
-                complaint.status === 'Pending'
-                  ? 'bg-rose-600 text-white shadow-xs'
-                  : 'bg-white text-rose-700 border border-rose-200 hover:bg-rose-50'
+              type="button"
+              onClick={handleSaveStatus}
+              disabled={isSaving}
+              className={`px-4 py-2 text-xs font-bold rounded-lg transition-all flex items-center gap-2 shadow-sm cursor-pointer disabled:opacity-50 ${
+                pendingStatus !== complaint.status
+                  ? 'bg-[#6d4c41] hover:bg-[#5a3e35] text-white animate-pulse'
+                  : 'bg-[#8d7b6d] hover:bg-[#6d4c41] text-white'
               }`}
             >
-              <Clock className="w-3.5 h-3.5 inline mr-1" />
-              Pending (زیرِ التوا)
-            </button>
-            <button
-              onClick={() => onUpdateStatus(complaint.id, 'Under Review', complaint.complaintNumber)}
-              className={`px-3.5 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
-                complaint.status === 'Under Review'
-                  ? 'bg-amber-600 text-white shadow-xs'
-                  : 'bg-white text-amber-700 border border-amber-200 hover:bg-amber-50'
-              }`}
-            >
-              <AlertCircle className="w-3.5 h-3.5 inline mr-1" />
-              Under Review (جائزہ لیا جا رہا ہے)
-            </button>
-            <button
-              onClick={() => onUpdateStatus(complaint.id, 'Resolved', complaint.complaintNumber)}
-              className={`px-3.5 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
-                complaint.status === 'Resolved'
-                  ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'bg-white text-emerald-700 border border-emerald-200 hover:bg-emerald-50'
-              }`}
-            >
-              <CheckCircle2 className="w-3.5 h-3.5 inline mr-1" />
-              Resolved (حل ہو چکا ہے)
+              {isSaving ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <span>Updating Database...</span>
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  <span>Update Status in Database (ڈیٹا بیس میں اپڈیٹ کریں)</span>
+                </>
+              )}
             </button>
           </div>
+
+          {saveSuccessMsg && (
+            <div className="p-2.5 bg-emerald-50 text-emerald-800 text-xs font-semibold rounded-lg border border-emerald-200 flex items-center gap-1.5 animate-fadeIn">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>{saveSuccessMsg}</span>
+            </div>
+          )}
         </div>
 
         {/* Customer & Order Information Grid */}
