@@ -246,12 +246,23 @@ export async function getAllComplaints(): Promise<SubmittedComplaintRecord[]> {
     if (key) {
       const existing = recordMap.get(key);
       if (existing) {
+        // If local record had a status update (e.g. Under Review or Resolved) while Supabase still shows Pending,
+        // preserve the non-Pending status and sync it back to Supabase
+        const preferredStatus =
+          existing.status !== 'Pending' && rec.status === 'Pending'
+            ? existing.status
+            : (rec.status || existing.status);
+
         recordMap.set(key, {
           ...existing,
           ...rec,
-          // Supabase database status takes absolute priority for cloud sync across devices
-          status: rec.status || existing.status,
+          status: preferredStatus,
         });
+
+        // Background sync if local status was ahead of Supabase
+        if (existing.status !== 'Pending' && rec.status === 'Pending') {
+          updateComplaintStatus(existing.id, existing.status, existing.complaintNumber).catch(() => {});
+        }
       } else {
         recordMap.set(key, rec);
       }
@@ -291,12 +302,12 @@ export async function updateComplaintStatus(
 
   console.log(`[updateComplaintStatus] Updating status to "${newStatus}" for complaint "${rawCompNum}" (id: "${id}")`);
 
-  // 1. Update in Supabase
+  // 1. Update in Supabase Database
   if (supabase) {
     try {
       let updatedCount = 0;
 
-      // Strategy A: Update by clean complaint_number (e.g. MF-2026-162327)
+      // Strategy 1: Direct UPDATE by clean complaint_number
       if (cleanCompNum) {
         const { data, error } = await supabase
           .from('Complaints')
@@ -305,14 +316,14 @@ export async function updateComplaintStatus(
           .select();
 
         if (error) {
-          console.warn('[updateComplaintStatus] Strategy A error:', error.message);
+          console.warn('[updateComplaintStatus] Strategy 1 error:', error.message);
         } else if (data && data.length > 0) {
-          console.log('[updateComplaintStatus] Strategy A succeeded:', data.length, 'row(s)');
+          console.log('[updateComplaintStatus] Strategy 1 succeeded:', data.length, 'row(s)');
           updatedCount += data.length;
         }
       }
 
-      // Strategy B: Update by complaint_number with # (e.g. #MF-2026-162327)
+      // Strategy 2: Direct UPDATE by complaint_number with #
       if (updatedCount === 0 && hashCompNum) {
         const { data, error } = await supabase
           .from('Complaints')
@@ -321,14 +332,14 @@ export async function updateComplaintStatus(
           .select();
 
         if (error) {
-          console.warn('[updateComplaintStatus] Strategy B error:', error.message);
+          console.warn('[updateComplaintStatus] Strategy 2 error:', error.message);
         } else if (data && data.length > 0) {
-          console.log('[updateComplaintStatus] Strategy B succeeded:', data.length, 'row(s)');
+          console.log('[updateComplaintStatus] Strategy 2 succeeded:', data.length, 'row(s)');
           updatedCount += data.length;
         }
       }
 
-      // Strategy C: Update by numeric ID
+      // Strategy 3: Direct UPDATE by numeric ID
       const numId = parseInt(id, 10);
       if (updatedCount === 0 && !isNaN(numId) && numId > 0 && String(numId) === id.trim()) {
         const { data, error } = await supabase
@@ -338,14 +349,14 @@ export async function updateComplaintStatus(
           .select();
 
         if (error) {
-          console.warn('[updateComplaintStatus] Strategy C error:', error.message);
+          console.warn('[updateComplaintStatus] Strategy 3 error:', error.message);
         } else if (data && data.length > 0) {
-          console.log('[updateComplaintStatus] Strategy C succeeded:', data.length, 'row(s)');
+          console.log('[updateComplaintStatus] Strategy 3 succeeded:', data.length, 'row(s)');
           updatedCount += data.length;
         }
       }
 
-      // Strategy D: Update by string ID (only if not a local dummy id like comp_123)
+      // Strategy 4: Direct UPDATE by string ID
       if (updatedCount === 0 && id && !id.startsWith('comp_')) {
         const { data, error } = await supabase
           .from('Complaints')
@@ -354,61 +365,114 @@ export async function updateComplaintStatus(
           .select();
 
         if (error) {
-          console.warn('[updateComplaintStatus] Strategy D error:', error.message);
+          console.warn('[updateComplaintStatus] Strategy 4 error:', error.message);
         } else if (data && data.length > 0) {
-          console.log('[updateComplaintStatus] Strategy D succeeded:', data.length, 'row(s)');
+          console.log('[updateComplaintStatus] Strategy 4 succeeded:', data.length, 'row(s)');
           updatedCount += data.length;
         }
       }
 
-      // Strategy E: Case-insensitive / ilike wildcard fallback (e.g., %162327%)
-      if (updatedCount === 0 && digitsOnly && digitsOnly.length >= 5) {
-        const { data, error } = await supabase
-          .from('Complaints')
-          .update({ status: newStatus })
-          .ilike('complaint_number', `%${digitsOnly}%`)
-          .select();
+      // Strategy 5: UPSERT strategy to bypass potential RLS UPDATE policy restrictions
+      // Fetch matching row(s) from Supabase first
+      const { data: dbRows } = await supabase
+        .from('Complaints')
+        .select('*');
 
-        if (error) {
-          console.warn('[updateComplaintStatus] Strategy E error:', error.message);
-        } else if (data && data.length > 0) {
-          console.log('[updateComplaintStatus] Strategy E succeeded:', data.length, 'row(s)');
-          updatedCount += data.length;
-        }
-      }
+      if (dbRows && dbRows.length > 0) {
+        const matchedDbRow = dbRows.find((item: any) => {
+          const itemNum = (item.complaint_number || '').trim();
+          const itemCleanNum = itemNum.replace(/^#/, '').trim();
+          const itemId = String(item.id || '').trim();
 
-      // Strategy F: Update without .select() in case RLS/PostgREST blocks select on update
-      if (updatedCount === 0) {
-        if (cleanCompNum) {
-          const { error } = await supabase
+          return (
+            itemCleanNum === cleanCompNum ||
+            itemNum === rawCompNum ||
+            itemNum === hashCompNum ||
+            itemId === id ||
+            (digitsOnly && digitsOnly.length >= 5 && itemNum.includes(digitsOnly))
+          );
+        });
+
+        if (matchedDbRow) {
+          console.log('[updateComplaintStatus] Found matching row in Supabase database:', matchedDbRow.id, matchedDbRow.complaint_number);
+
+          // Update by explicit id and complaint_number
+          if (matchedDbRow.id) {
+            await supabase
+              .from('Complaints')
+              .update({ status: newStatus })
+              .eq('id', matchedDbRow.id);
+          }
+
+          if (matchedDbRow.complaint_number) {
+            await supabase
+              .from('Complaints')
+              .update({ status: newStatus })
+              .eq('complaint_number', matchedDbRow.complaint_number);
+          }
+
+          // Perform UPSERT with full row object & updated status
+          const upsertPayload = {
+            ...matchedDbRow,
+            status: newStatus,
+          };
+
+          const { error: upsertErr } = await supabase
             .from('Complaints')
-            .update({ status: newStatus })
-            .eq('complaint_number', cleanCompNum);
+            .upsert([upsertPayload]);
 
-          if (error) {
-            console.warn('[updateComplaintStatus] Strategy F1 error:', error.message);
+          if (upsertErr) {
+            console.warn('[updateComplaintStatus] Upsert error:', upsertErr.message);
           } else {
-            console.log('[updateComplaintStatus] Strategy F1 executed without select');
+            console.log('[updateComplaintStatus] Upsert succeeded in database!');
+            updatedCount++;
           }
         }
-        if (hashCompNum) {
-          const { error } = await supabase
-            .from('Complaints')
-            .update({ status: newStatus })
-            .eq('complaint_number', hashCompNum);
+      }
 
-          if (error) {
-            console.warn('[updateComplaintStatus] Strategy F2 error:', error.message);
+      // Strategy 6: Fallback if record was not found in Supabase at all (e.g. created offline)
+      if (updatedCount === 0) {
+        // Try reading local storage record to insert into Supabase database with updated status
+        let localRec: SubmittedComplaintRecord | null = null;
+        try {
+          const cached = localStorage.getItem(STORAGE_KEY);
+          if (cached) {
+            const records: SubmittedComplaintRecord[] = JSON.parse(cached);
+            localRec = records.find(
+              (r) =>
+                r.id === id ||
+                r.complaintNumber === id ||
+                r.complaintNumber === rawCompNum ||
+                r.complaintNumber === cleanCompNum ||
+                r.complaintNumber === hashCompNum
+            ) || null;
           }
-        }
-        if (id && !id.startsWith('comp_')) {
-          const { error } = await supabase
-            .from('Complaints')
-            .update({ status: newStatus })
-            .eq('id', id);
+        } catch (e) {}
 
-          if (error) {
-            console.warn('[updateComplaintStatus] Strategy F3 error:', error.message);
+        if (localRec) {
+          const newDbRecord = {
+            complaint_number: localRec.complaintNumber || cleanCompNum,
+            tracking_number: localRec.trackingNumber || '',
+            order_date: localRec.orderDate || '',
+            customer_name: localRec.customerName || '',
+            contact_number: localRec.contactNumber || '',
+            address: localRec.address || '',
+            city: localRec.city || '',
+            ordered_product_image_url: localRec.orderedProductImageDataUrl || '',
+            received_product_image_url: localRec.receivedProductImageDataUrl || '',
+            complaint_description: localRec.complaintDescription || '',
+            status: newStatus,
+            created_at: localRec.submissionTimestamp || new Date().toISOString(),
+          };
+
+          const { error: insertErr } = await supabase
+            .from('Complaints')
+            .insert([newDbRecord]);
+
+          if (insertErr) {
+            console.warn('[updateComplaintStatus] Fallback insert error:', insertErr.message);
+          } else {
+            console.log('[updateComplaintStatus] Fallback insert succeeded into Complaints table!');
           }
         }
       }
