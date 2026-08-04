@@ -240,22 +240,17 @@ export async function getAllComplaints(): Promise<SubmittedComplaintRecord[]> {
     if (key) recordMap.set(key, rec);
   });
 
-  // Merge supabase records
+  // Merge supabase records (Supabase is single source of truth for cloud sync)
   supabaseRecords.forEach((rec) => {
     const key = (rec.complaintNumber || rec.id).trim().toLowerCase();
     if (key) {
       const existing = recordMap.get(key);
       if (existing) {
-        // If local record had an updated status (Under Review/Resolved) while Supabase has Pending, retain updated status
-        const preferredStatus =
-          existing.status !== 'Pending' && rec.status === 'Pending'
-            ? existing.status
-            : rec.status;
-
+        // Supabase status is canonical for multi-device sync
         recordMap.set(key, {
           ...existing,
           ...rec,
-          status: preferredStatus,
+          status: rec.status || existing.status,
         });
       } else {
         recordMap.set(key, rec);
@@ -289,25 +284,75 @@ export async function updateComplaintStatus(
   complaintNumber?: string
 ): Promise<boolean> {
   const supabase = getSupabase();
-  const targetCompNum = (complaintNumber || id).trim();
+  const rawCompNum = (complaintNumber || id).trim();
+  const cleanCompNum = rawCompNum.replace(/^#/, '').trim();
+  const hashCompNum = cleanCompNum ? `#${cleanCompNum}` : rawCompNum;
 
   // 1. Update in Supabase
   if (supabase) {
     try {
-      // First update by complaint_number (text column, e.g. MF-2026-162327)
-      if (targetCompNum) {
-        await supabase
+      let updatedCount = 0;
+
+      // Strategy A: Update by clean complaint_number (e.g. MF-2026-162327)
+      if (cleanCompNum) {
+        const { data, error } = await supabase
           .from('Complaints')
           .update({ status: newStatus })
-          .eq('complaint_number', targetCompNum);
+          .eq('complaint_number', cleanCompNum)
+          .select();
+
+        if (!error && data && data.length > 0) {
+          updatedCount += data.length;
+        }
       }
 
-      // Also update by id
-      if (id && id !== targetCompNum) {
+      // Strategy B: Update by complaint_number with # (e.g. #MF-2026-162327)
+      if (updatedCount === 0 && hashCompNum) {
+        const { data, error } = await supabase
+          .from('Complaints')
+          .update({ status: newStatus })
+          .eq('complaint_number', hashCompNum)
+          .select();
+
+        if (!error && data && data.length > 0) {
+          updatedCount += data.length;
+        }
+      }
+
+      // Strategy C: Update by numeric ID
+      const numId = parseInt(id, 10);
+      if (!isNaN(numId) && numId > 0) {
+        const { data, error } = await supabase
+          .from('Complaints')
+          .update({ status: newStatus })
+          .eq('id', numId)
+          .select();
+
+        if (!error && data && data.length > 0) {
+          updatedCount += data.length;
+        }
+      }
+
+      // Strategy D: Update by string ID
+      if (id) {
+        const { data, error } = await supabase
+          .from('Complaints')
+          .update({ status: newStatus })
+          .eq('id', id)
+          .select();
+
+        if (!error && data && data.length > 0) {
+          updatedCount += data.length;
+        }
+      }
+
+      // Strategy E: Case-insensitive / ilike wildcard fallback (e.g., %162327%)
+      const digitsOnly = cleanCompNum.replace(/[^\d]/g, '');
+      if (updatedCount === 0 && digitsOnly.length >= 5) {
         await supabase
           .from('Complaints')
           .update({ status: newStatus })
-          .eq('id', id);
+          .ilike('complaint_number', `%${digitsOnly}%`);
       }
     } catch (err) {
       console.warn('Error updating status in Supabase:', err);
@@ -323,7 +368,9 @@ export async function updateComplaintStatus(
         const matches =
           rec.id === id ||
           rec.complaintNumber === id ||
-          rec.complaintNumber === targetCompNum ||
+          rec.complaintNumber === rawCompNum ||
+          rec.complaintNumber === cleanCompNum ||
+          rec.complaintNumber === hashCompNum ||
           (complaintNumber && rec.complaintNumber === complaintNumber);
         return matches ? { ...rec, status: newStatus } : rec;
       });
