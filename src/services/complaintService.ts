@@ -231,16 +231,38 @@ export async function getAllComplaints(): Promise<SubmittedComplaintRecord[]> {
     console.warn('LocalStorage load error:', e);
   }
 
-  // Merge unique by complaintNumber or id
-  if (supabaseRecords.length > 0) {
-    // Save to local storage as fresh cache
+  // Merge unique by complaintNumber or id so no records are lost
+  const recordMap = new Map<string, SubmittedComplaintRecord>();
+
+  // Add supabase records first
+  supabaseRecords.forEach((rec) => {
+    const key = (rec.complaintNumber || rec.id).trim().toLowerCase();
+    if (key) recordMap.set(key, rec);
+  });
+
+  // Add local records if not present in map
+  localRecords.forEach((rec) => {
+    const key = (rec.complaintNumber || rec.id).trim().toLowerCase();
+    if (key && !recordMap.has(key)) {
+      recordMap.set(key, rec);
+    }
+  });
+
+  const mergedRecords = Array.from(recordMap.values()).sort((a, b) => {
+    return (
+      new Date(b.submissionTimestamp || 0).getTime() -
+      new Date(a.submissionTimestamp || 0).getTime()
+    );
+  });
+
+  // Save merged to local storage cache
+  if (mergedRecords.length > 0) {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(supabaseRecords));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(mergedRecords));
     } catch (e) {}
-    return supabaseRecords;
   }
 
-  return localRecords;
+  return mergedRecords;
 }
 
 /**

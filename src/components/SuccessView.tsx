@@ -3,7 +3,6 @@ import {
   CheckCircle2,
   Copy,
   Check,
-  MessageCircle,
   Clock,
   FileText,
   Printer,
@@ -15,7 +14,6 @@ import {
   Phone,
 } from 'lucide-react';
 import { SubmittedComplaintRecord, StoreSettings } from '../types';
-import { getWhatsAppLink } from '../services/complaintService';
 
 interface SuccessViewProps {
   record: SubmittedComplaintRecord;
@@ -37,8 +35,6 @@ export const SuccessView: React.FC<SuccessViewProps> = ({ record, settings, onRe
   };
 
   const storeName = settings?.pageName || 'Minsa Fashion Store';
-  const whatsappNum = settings?.phoneNumber || settings?.whatsappNumber || '03018463706';
-  const whatsappUrl = getWhatsAppLink(record.complaintNumber, storeName, settings?.whatsappNumber);
 
   return (
     <div className="space-y-8 bg-white p-6 sm:p-10 rounded-2xl border border-[#eee3d8] shadow-xl shadow-[#ece0d1]/30 max-w-3xl mx-auto text-[#4a423d] animate-fade-in">
@@ -106,23 +102,6 @@ export const SuccessView: React.FC<SuccessViewProps> = ({ record, settings, onRe
             </p>
           </div>
         </div>
-      </div>
-
-      {/* WhatsApp Call to Action Button */}
-      <div className="text-center space-y-3 pt-2">
-        <p className="text-xs font-medium text-[#8d7b6d]">Need instant assistance or have additional information?</p>
-        <a
-          href={whatsappUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="w-full sm:w-auto inline-flex items-center justify-center gap-3 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-base py-4 px-8 rounded-xl shadow-lg shadow-emerald-900/10 transition-all duration-200 cursor-pointer"
-        >
-          <MessageCircle className="w-6 h-6 fill-current" />
-          <span>Contact Us on WhatsApp ({whatsappNum})</span>
-        </a>
-        <p className="text-xs text-[#8d7b6d]">
-          Clicking opens WhatsApp with your Complaint Number pre-filled ({record.complaintNumber}).
-        </p>
       </div>
 
       {/* Submitted Details Receipt Summary */}

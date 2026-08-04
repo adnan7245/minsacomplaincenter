@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Search, X, CheckCircle2, Clock, AlertCircle, Phone, MessageSquare, ExternalLink, RefreshCw, FileText } from 'lucide-react';
+import { Search, X, CheckCircle2, Clock, AlertCircle, RefreshCw, FileText } from 'lucide-react';
 import { SubmittedComplaintRecord, StoreSettings } from '../types';
-import { getAllComplaints, getWhatsAppLink } from '../services/complaintService';
+import { getAllComplaints } from '../services/complaintService';
 
 interface CheckStatusModalProps {
   isOpen: boolean;
@@ -27,18 +27,65 @@ export const CheckStatusModal: React.FC<CheckStatusModalProps> = ({ isOpen, onCl
 
     try {
       const all = await getAllComplaints();
-      const cleanQuery = query.toLowerCase().replace(/[\s\-\+]/g, '');
+      const rawQuery = query.toLowerCase();
+
+      // Clean query by removing non-alphanumeric characters (e.g. #, -, +, spaces)
+      const cleanAlphaNumQuery = rawQuery.replace(/[^a-z0-9]/g, '');
+      const queryDigits = rawQuery.replace(/[^\d]/g, '');
 
       const results = all.filter((rec) => {
-        const cleanCompNum = rec.complaintNumber.toLowerCase().replace(/[\s\-\+]/g, '');
-        const cleanContact = rec.contactNumber.toLowerCase().replace(/[\s\-\+]/g, '');
-        const cleanTrack = rec.trackingNumber.toLowerCase().replace(/[\s\-\+]/g, '');
+        const rawCompNum = (rec.complaintNumber || '').toLowerCase();
+        const cleanCompNum = rawCompNum.replace(/[^a-z0-9]/g, '');
 
-        return (
-          cleanCompNum.includes(cleanQuery) ||
-          cleanContact.includes(cleanQuery) ||
-          (cleanTrack && cleanTrack.includes(cleanQuery))
-        );
+        const rawContact = (rec.contactNumber || '').toLowerCase();
+        const cleanContact = rawContact.replace(/[^a-z0-9]/g, '');
+        const contactDigits = rawContact.replace(/[^\d]/g, '');
+
+        const rawTrack = (rec.trackingNumber || '').toLowerCase();
+        const cleanTrack = rawTrack.replace(/[^a-z0-9]/g, '');
+
+        const rawName = (rec.customerName || '').toLowerCase();
+        const rawId = (rec.id || '').toLowerCase();
+
+        // 1. Direct complaint number match (with or without #, -, spaces)
+        if (cleanAlphaNumQuery && cleanCompNum.includes(cleanAlphaNumQuery)) {
+          return true;
+        }
+
+        // 2. ID match
+        if (cleanAlphaNumQuery && rawId.replace(/[^a-z0-9]/g, '').includes(cleanAlphaNumQuery)) {
+          return true;
+        }
+
+        // 3. Tracking number match
+        if (cleanAlphaNumQuery && cleanTrack && cleanTrack.includes(cleanAlphaNumQuery)) {
+          return true;
+        }
+
+        // 4. Customer Name match
+        if (rawName && rawName.includes(rawQuery)) {
+          return true;
+        }
+
+        // 5. Phone number flexible match (e.g., 0301 vs 92301 vs last 10 digits)
+        if (queryDigits.length >= 6 && contactDigits) {
+          if (contactDigits.includes(queryDigits) || queryDigits.includes(contactDigits)) {
+            return true;
+          }
+          // Compare last 10 digits for Pakistan numbers
+          if (queryDigits.length >= 10 && contactDigits.length >= 10) {
+            if (contactDigits.slice(-10) === queryDigits.slice(-10)) {
+              return true;
+            }
+          }
+        }
+
+        // 6. Generic contact match
+        if (cleanAlphaNumQuery && cleanContact.includes(cleanAlphaNumQuery)) {
+          return true;
+        }
+
+        return false;
       });
 
       setMatchingComplaints(results);
@@ -157,12 +204,6 @@ export const CheckStatusModal: React.FC<CheckStatusModalProps> = ({ isOpen, onCl
           )}
 
           {matchingComplaints.map((comp) => {
-            const waLink = getWhatsAppLink(
-              comp.complaintNumber,
-              settings.pageName,
-              settings.whatsappNumber || settings.phoneNumber
-            );
-
             return (
               <div
                 key={comp.id}
@@ -246,27 +287,15 @@ export const CheckStatusModal: React.FC<CheckStatusModalProps> = ({ isOpen, onCl
                   )}
                   {comp.status === 'Under Review' && (
                     <p dir="rtl" className="font-sans">
-                      🔍 آپ کی شکایت کا جائزہ لیا جا رہا ہے۔ ہماری ٹیم جلد آپ سے واٹس ایپ یا فون پر رابطہ کرے گی۔
+                      🔍 آپ کی شکایت کا جائزہ لیا جا رہا ہے۔ ہماری ٹیم جلد از جلد مسئلہ حل کرے گی۔
                     </p>
                   )}
                   {comp.status === 'Resolved' && (
                     <p dir="rtl" className="font-sans">
-                      ✅ مبارک ہو! آپ کی شکایت کا مسئلہ حل کر دیا گیا ہے۔ اگر مزید مدد درکار ہو تو رابطہ کریں۔
+                      ✅ مبارک ہو! آپ کی شکایت کا مسئلہ حل کر دیا گیا ہے۔
                     </p>
                   )}
                 </div>
-
-                {/* WhatsApp Help Button */}
-                <a
-                  href={waLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-xs"
-                >
-                  <MessageSquare className="w-4 h-4 text-emerald-200" />
-                  <span>WhatsApp Support Contact (اس شکایت کے لیے واٹس ایپ پر بات کریں)</span>
-                  <ExternalLink className="w-3 h-3 ml-auto opacity-70" />
-                </a>
               </div>
             );
           })}

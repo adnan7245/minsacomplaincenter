@@ -7,7 +7,6 @@ import {
   Store,
   Phone,
   MapPin,
-  MessageSquare,
   Save,
   Check,
   Eye,
@@ -16,7 +15,6 @@ import {
   AlertCircle,
   CheckCircle2,
   X,
-  ExternalLink,
   ShieldAlert,
   ArrowLeft,
   Filter,
@@ -29,8 +27,7 @@ import { SubmittedComplaintRecord, StoreSettings } from '../../types';
 import {
   getAllComplaints,
   updateComplaintStatus,
-  deleteComplaint,
-  getCustomerWhatsAppReplyLink
+  deleteComplaint
 } from '../../services/complaintService';
 import { getStoreSettings, saveStoreSettings } from '../../services/settingsService';
 import { ComplaintDetailModal } from './ComplaintDetailModal';
@@ -399,23 +396,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, onSettingsUpdat
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <a
-                          href={getCustomerWhatsAppReplyLink(
-                            c.contactNumber,
-                            c.complaintNumber,
-                            c.customerName,
-                            c.status,
-                            settings.pageName
-                          )}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors shadow-2xs"
-                        >
-                          <MessageSquare className="w-3.5 h-3.5" />
-                          <span>Reply WhatsApp</span>
-                          <ExternalLink className="w-3 h-3" />
-                        </a>
-
                         <button
                           onClick={() => setSelectedComplaint(c)}
                           className="px-3 py-1.5 bg-[#f4ece4] hover:bg-[#eee3d8] text-[#6d4c41] text-xs font-semibold rounded-lg flex items-center gap-1 transition-colors border border-[#d7ccc8]"
@@ -448,7 +428,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, onSettingsUpdat
                   Website Settings (پلیٹ فارم کی ترتیبات)
                 </h3>
                 <p className="text-xs text-[#8d7b6d] mt-1">
-                  یہاں سے آپ اپنی ویب سائٹ کا نام، فون نمبر، واٹس ایپ نمبر، اور پتہ تبدیل کر سکتے ہیں۔
+                  یہاں سے آپ اپنی ویب سائٹ کا نام، پتہ، اور پیغام تبدیل کر سکتے ہیں۔
                 </p>
               </div>
 
@@ -468,46 +448,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, onSettingsUpdat
                       className="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl border border-[#d7ccc8] focus:border-[#6d4c41] focus:ring-2 focus:ring-[#6d4c41]/20 outline-hidden bg-[#fdfaf8]"
                       required
                     />
-                  </div>
-                </div>
-
-                {/* Phone Number */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-[#6d4c41] mb-1">
-                      Contact Phone Number (فون نمبر) <span className="text-[10px] font-normal text-[#8d7b6d]">(Optional)</span>:
-                    </label>
-                    <div className="relative">
-                      <Phone className="w-4 h-4 text-[#8d7b6d] absolute left-3 top-1/2 -translate-y-1/2" />
-                      <input
-                        type="text"
-                        value={settingsForm.phoneNumber}
-                        onChange={(e) =>
-                          setSettingsForm({ ...settingsForm, phoneNumber: e.target.value })
-                        }
-                        placeholder="e.g. 03018463706 (یا خالی چھوڑ دیں)"
-                        className="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl border border-[#d7ccc8] focus:border-[#6d4c41] focus:ring-2 focus:ring-[#6d4c41]/20 outline-hidden bg-[#fdfaf8]"
-                      />
-                    </div>
-                  </div>
-
-                  {/* WhatsApp Number */}
-                  <div>
-                    <label className="block text-xs font-bold text-[#6d4c41] mb-1">
-                      WhatsApp Number (واٹس ایپ نمبر) <span className="text-[10px] font-normal text-[#8d7b6d]">(Optional)</span>:
-                    </label>
-                    <div className="relative">
-                      <MessageSquare className="w-4 h-4 text-emerald-600 absolute left-3 top-1/2 -translate-y-1/2" />
-                      <input
-                        type="text"
-                        value={settingsForm.whatsappNumber}
-                        onChange={(e) =>
-                          setSettingsForm({ ...settingsForm, whatsappNumber: e.target.value })
-                        }
-                        placeholder="e.g. 923018463706 (یا خالی چھوڑ دیں)"
-                        className="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl border border-[#d7ccc8] focus:border-[#6d4c41] focus:ring-2 focus:ring-[#6d4c41]/20 outline-hidden bg-[#fdfaf8]"
-                      />
-                    </div>
                   </div>
                 </div>
 

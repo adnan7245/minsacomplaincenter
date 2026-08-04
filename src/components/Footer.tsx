@@ -1,5 +1,5 @@
 import React from 'react';
-import { MapPin, Phone, ShieldCheck, UserCheck } from 'lucide-react';
+import { MapPin, ShieldCheck, UserCheck } from 'lucide-react';
 import { StoreSettings } from '../types';
 
 interface FooterProps {
@@ -28,16 +28,6 @@ export const Footer: React.FC<FooterProps> = ({ settings, onOpenAdmin, isAdminAu
                 <MapPin className="w-3.5 h-3.5 text-[#a67c52]" />
                 <span>{settings.address}</span>
               </span>
-            )}
-            {settings.address && settings.phoneNumber && <span>•</span>}
-            {settings.phoneNumber && (
-              <a
-                href={`tel:${settings.phoneNumber}`}
-                className="flex items-center gap-1 text-white hover:text-[#a67c52] transition-colors font-medium"
-              >
-                <Phone className="w-3.5 h-3.5 text-[#a67c52]" />
-                <span>{settings.phoneNumber}</span>
-              </a>
             )}
           </div>
         </div>

@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { X, Phone, MapPin, Calendar, Hash, FileText, CheckCircle2, Clock, AlertCircle, MessageSquare, ExternalLink, Image as ImageIcon } from 'lucide-react';
+import { X, Phone, MapPin, Calendar, Hash, FileText, CheckCircle2, Clock, AlertCircle, Image as ImageIcon } from 'lucide-react';
 import { SubmittedComplaintRecord, StoreSettings } from '../../types';
-import { getCustomerWhatsAppReplyLink } from '../../services/complaintService';
 
 interface ComplaintDetailModalProps {
   complaint: SubmittedComplaintRecord | null;
@@ -19,14 +18,6 @@ export const ComplaintDetailModal: React.FC<ComplaintDetailModalProps> = ({
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   if (!complaint) return null;
-
-  const whatsappLink = getCustomerWhatsAppReplyLink(
-    complaint.contactNumber,
-    complaint.complaintNumber,
-    complaint.customerName,
-    complaint.status,
-    settings.pageName
-  );
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
@@ -139,17 +130,6 @@ export const ComplaintDetailModal: React.FC<ComplaintDetailModalProps> = ({
                 </span>
               </div>
             </div>
-
-            <a
-              href={whatsappLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-3 w-full py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl flex items-center justify-center gap-2 shadow-xs transition-colors"
-            >
-              <MessageSquare className="w-4 h-4" />
-              <span>Reply via WhatsApp (کسٹمر سے واٹس ایپ پر بات کریں)</span>
-              <ExternalLink className="w-3 h-3" />
-            </a>
           </div>
 
           {/* Order Details */}

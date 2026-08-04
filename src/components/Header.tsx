@@ -1,5 +1,5 @@
 import React from 'react';
-import { Phone, MapPin, ShoppingBag, ShieldCheck, HeartHandshake, UserCheck, Search } from 'lucide-react';
+import { MapPin, ShoppingBag, ShieldCheck, HeartHandshake, UserCheck, Search } from 'lucide-react';
 import { StoreSettings } from '../types';
 
 import logoImg from '../assets/images/minsa_store_logo_1785425219725.jpg';
@@ -48,16 +48,6 @@ export const Header: React.FC<HeaderProps> = ({
               <Search className="w-3 h-3 text-[#fdfaf8]" />
               <span>Check Status (سٹیٹس چیک کریں)</span>
             </button>
-
-            {settings.phoneNumber && (
-              <a
-                href={`tel:${settings.phoneNumber}`}
-                className="flex items-center gap-1.5 bg-[#5d4037] hover:bg-[#4e342e] px-3 py-1 rounded-full text-white transition-colors border border-[#8d6e63]"
-              >
-                <Phone className="w-3 h-3 text-[#d7ccc8]" />
-                <span className="font-semibold tracking-wide">{settings.phoneNumber}</span>
-              </a>
-            )}
 
             {/* Show admin button ONLY if authenticated or admin mode is active */}
             {(isAdminOpen || isAdminAuthenticated) && (
