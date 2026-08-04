@@ -6,7 +6,7 @@ interface ComplaintDetailModalProps {
   complaint: SubmittedComplaintRecord | null;
   settings: StoreSettings;
   onClose: () => void;
-  onUpdateStatus: (id: string, status: 'Pending' | 'Under Review' | 'Resolved') => void;
+  onUpdateStatus: (id: string, status: 'Pending' | 'Under Review' | 'Resolved', complaintNumber?: string) => void;
 }
 
 export const ComplaintDetailModal: React.FC<ComplaintDetailModalProps> = ({
@@ -62,37 +62,37 @@ export const ComplaintDetailModal: React.FC<ComplaintDetailModalProps> = ({
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <button
-              onClick={() => onUpdateStatus(complaint.id, 'Pending')}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+              onClick={() => onUpdateStatus(complaint.id, 'Pending', complaint.complaintNumber)}
+              className={`px-3.5 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
                 complaint.status === 'Pending'
                   ? 'bg-rose-600 text-white shadow-xs'
                   : 'bg-white text-rose-700 border border-rose-200 hover:bg-rose-50'
               }`}
             >
               <Clock className="w-3.5 h-3.5 inline mr-1" />
-              Pending
+              Pending (زیرِ التوا)
             </button>
             <button
-              onClick={() => onUpdateStatus(complaint.id, 'Under Review')}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+              onClick={() => onUpdateStatus(complaint.id, 'Under Review', complaint.complaintNumber)}
+              className={`px-3.5 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
                 complaint.status === 'Under Review'
                   ? 'bg-amber-600 text-white shadow-xs'
                   : 'bg-white text-amber-700 border border-amber-200 hover:bg-amber-50'
               }`}
             >
               <AlertCircle className="w-3.5 h-3.5 inline mr-1" />
-              Under Review
+              Under Review (جائزہ لیا جا رہا ہے)
             </button>
             <button
-              onClick={() => onUpdateStatus(complaint.id, 'Resolved')}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+              onClick={() => onUpdateStatus(complaint.id, 'Resolved', complaint.complaintNumber)}
+              className={`px-3.5 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
                 complaint.status === 'Resolved'
                   ? 'bg-emerald-600 text-white shadow-xs'
                   : 'bg-white text-emerald-700 border border-emerald-200 hover:bg-emerald-50'
               }`}
             >
               <CheckCircle2 className="w-3.5 h-3.5 inline mr-1" />
-              Resolved
+              Resolved (حل ہو چکا ہے)
             </button>
           </div>
         </div>

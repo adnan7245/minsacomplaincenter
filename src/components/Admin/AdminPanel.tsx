@@ -104,15 +104,40 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, onSettingsUpdat
     }
   };
 
+  const [isUpdatingStatusId, setIsUpdatingStatusId] = useState<string | null>(null);
+  const [statusSaveNotification, setStatusSaveNotification] = useState<string | null>(null);
+
   // Status Update Handler
-  const handleStatusChange = async (id: string, newStatus: 'Pending' | 'Under Review' | 'Resolved') => {
-    await updateComplaintStatus(id, newStatus);
+  const handleStatusChange = async (
+    id: string,
+    newStatus: 'Pending' | 'Under Review' | 'Resolved',
+    complaintNumber?: string
+  ) => {
+    setIsUpdatingStatusId(id);
+    await updateComplaintStatus(id, newStatus, complaintNumber);
+
     setComplaints((prev) =>
-      prev.map((c) => (c.id === id || c.complaintNumber === id ? { ...c, status: newStatus } : c))
+      prev.map((c) =>
+        c.id === id || c.complaintNumber === id || (complaintNumber && c.complaintNumber === complaintNumber)
+          ? { ...c, status: newStatus }
+          : c
+      )
     );
-    if (selectedComplaint && (selectedComplaint.id === id || selectedComplaint.complaintNumber === id)) {
+
+    if (
+      selectedComplaint &&
+      (selectedComplaint.id === id ||
+        selectedComplaint.complaintNumber === id ||
+        (complaintNumber && selectedComplaint.complaintNumber === complaintNumber))
+    ) {
       setSelectedComplaint((prev) => (prev ? { ...prev, status: newStatus } : null));
     }
+
+    setIsUpdatingStatusId(null);
+    setStatusSaveNotification(
+      `✓ Status for complaint #${complaintNumber || id} saved successfully as "${newStatus}"!`
+    );
+    setTimeout(() => setStatusSaveNotification(null), 3500);
   };
 
   // Delete Complaint Handler
@@ -296,6 +321,22 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, onSettingsUpdat
               </div>
             </div>
 
+            {/* Status Saved Floating Notification Banner */}
+            {statusSaveNotification && (
+              <div className="bg-emerald-700 text-white p-3 rounded-xl shadow-lg border border-emerald-500 flex items-center justify-between text-xs font-semibold animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-300 shrink-0" />
+                  <span>{statusSaveNotification}</span>
+                </div>
+                <button
+                  onClick={() => setStatusSaveNotification(null)}
+                  className="p-1 hover:bg-emerald-800 rounded-lg text-emerald-200 cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+
             {/* Complaints List Table / Cards */}
             {isLoading ? (
               <div className="py-12 text-center text-xs text-[#8d7b6d]">
@@ -333,26 +374,33 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, onSettingsUpdat
                       {/* Status Selector */}
                       <div className="flex items-center gap-2">
                         <span className="text-[11px] font-semibold text-[#8d7b6d]">Status:</span>
-                        <select
-                          value={c.status}
-                          onChange={(e) =>
-                            handleStatusChange(
-                              c.id,
-                              e.target.value as 'Pending' | 'Under Review' | 'Resolved'
-                            )
-                          }
-                          className={`text-xs font-bold px-2.5 py-1 rounded-lg border outline-hidden cursor-pointer ${
-                            c.status === 'Resolved'
-                              ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
-                              : c.status === 'Under Review'
-                              ? 'bg-amber-50 text-amber-800 border-amber-300'
-                              : 'bg-rose-50 text-rose-800 border-rose-300'
-                          }`}
-                        >
-                          <option value="Pending">Pending</option>
-                          <option value="Under Review">Under Review</option>
-                          <option value="Resolved">Resolved</option>
-                        </select>
+                        <div className="relative flex items-center">
+                          <select
+                            value={c.status}
+                            disabled={isUpdatingStatusId === c.id}
+                            onChange={(e) =>
+                              handleStatusChange(
+                                c.id,
+                                e.target.value as 'Pending' | 'Under Review' | 'Resolved',
+                                c.complaintNumber
+                              )
+                            }
+                            className={`text-xs font-bold px-2.5 py-1 rounded-lg border outline-hidden cursor-pointer transition-colors ${
+                              c.status === 'Resolved'
+                                ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                                : c.status === 'Under Review'
+                                ? 'bg-amber-50 text-amber-800 border-amber-300'
+                                : 'bg-rose-50 text-rose-800 border-rose-300'
+                            }`}
+                          >
+                            <option value="Pending">Pending (زیرِ التوا)</option>
+                            <option value="Under Review">Under Review (جائزہ لیا جا رہا ہے)</option>
+                            <option value="Resolved">Resolved (حل ہو چکا ہے)</option>
+                          </select>
+                          {isUpdatingStatusId === c.id && (
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin ml-1.5 text-[#6d4c41]" />
+                          )}
+                        </div>
                       </div>
                     </div>
 

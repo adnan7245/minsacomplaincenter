@@ -234,17 +234,32 @@ export async function getAllComplaints(): Promise<SubmittedComplaintRecord[]> {
   // Merge unique by complaintNumber or id so no records are lost
   const recordMap = new Map<string, SubmittedComplaintRecord>();
 
-  // Add supabase records first
-  supabaseRecords.forEach((rec) => {
+  // Add local records first
+  localRecords.forEach((rec) => {
     const key = (rec.complaintNumber || rec.id).trim().toLowerCase();
     if (key) recordMap.set(key, rec);
   });
 
-  // Add local records if not present in map
-  localRecords.forEach((rec) => {
+  // Merge supabase records
+  supabaseRecords.forEach((rec) => {
     const key = (rec.complaintNumber || rec.id).trim().toLowerCase();
-    if (key && !recordMap.has(key)) {
-      recordMap.set(key, rec);
+    if (key) {
+      const existing = recordMap.get(key);
+      if (existing) {
+        // If local record had an updated status (Under Review/Resolved) while Supabase has Pending, retain updated status
+        const preferredStatus =
+          existing.status !== 'Pending' && rec.status === 'Pending'
+            ? existing.status
+            : rec.status;
+
+        recordMap.set(key, {
+          ...existing,
+          ...rec,
+          status: preferredStatus,
+        });
+      } else {
+        recordMap.set(key, rec);
+      }
     }
   });
 
@@ -270,25 +285,29 @@ export async function getAllComplaints(): Promise<SubmittedComplaintRecord[]> {
  */
 export async function updateComplaintStatus(
   id: string,
-  newStatus: 'Pending' | 'Under Review' | 'Resolved'
+  newStatus: 'Pending' | 'Under Review' | 'Resolved',
+  complaintNumber?: string
 ): Promise<boolean> {
   const supabase = getSupabase();
+  const targetCompNum = (complaintNumber || id).trim();
 
   // 1. Update in Supabase
   if (supabase) {
     try {
-      // Try by id first
-      let { error } = await supabase
-        .from('Complaints')
-        .update({ status: newStatus })
-        .eq('id', id);
-
-      if (error) {
-        // Fallback by complaint_number
+      // First update by complaint_number (text column, e.g. MF-2026-162327)
+      if (targetCompNum) {
         await supabase
           .from('Complaints')
           .update({ status: newStatus })
-          .eq('complaint_number', id);
+          .eq('complaint_number', targetCompNum);
+      }
+
+      // Also update by id
+      if (id && id !== targetCompNum) {
+        await supabase
+          .from('Complaints')
+          .update({ status: newStatus })
+          .eq('id', id);
       }
     } catch (err) {
       console.warn('Error updating status in Supabase:', err);
@@ -300,9 +319,14 @@ export async function updateComplaintStatus(
     const cached = localStorage.getItem(STORAGE_KEY);
     if (cached) {
       const records: SubmittedComplaintRecord[] = JSON.parse(cached);
-      const updated = records.map((rec) =>
-        rec.id === id || rec.complaintNumber === id ? { ...rec, status: newStatus } : rec
-      );
+      const updated = records.map((rec) => {
+        const matches =
+          rec.id === id ||
+          rec.complaintNumber === id ||
+          rec.complaintNumber === targetCompNum ||
+          (complaintNumber && rec.complaintNumber === complaintNumber);
+        return matches ? { ...rec, status: newStatus } : rec;
+      });
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
     }
   } catch (e) {
