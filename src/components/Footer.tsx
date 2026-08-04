@@ -23,18 +23,22 @@ export const Footer: React.FC<FooterProps> = ({ settings, onOpenAdmin, isAdminAu
           </div>
 
           <div className="flex items-center gap-4 text-[#e5dcd3] flex-wrap justify-center">
-            <span className="flex items-center gap-1">
-              <MapPin className="w-3.5 h-3.5 text-[#a67c52]" />
-              <span>{settings.address || 'Faisalabad, Pakistan'}</span>
-            </span>
-            <span>•</span>
-            <a
-              href={`tel:${settings.phoneNumber}`}
-              className="flex items-center gap-1 text-white hover:text-[#a67c52] transition-colors font-medium"
-            >
-              <Phone className="w-3.5 h-3.5 text-[#a67c52]" />
-              <span>{settings.phoneNumber}</span>
-            </a>
+            {settings.address && (
+              <span className="flex items-center gap-1">
+                <MapPin className="w-3.5 h-3.5 text-[#a67c52]" />
+                <span>{settings.address}</span>
+              </span>
+            )}
+            {settings.address && settings.phoneNumber && <span>•</span>}
+            {settings.phoneNumber && (
+              <a
+                href={`tel:${settings.phoneNumber}`}
+                className="flex items-center gap-1 text-white hover:text-[#a67c52] transition-colors font-medium"
+              >
+                <Phone className="w-3.5 h-3.5 text-[#a67c52]" />
+                <span>{settings.phoneNumber}</span>
+              </a>
+            )}
           </div>
         </div>
 

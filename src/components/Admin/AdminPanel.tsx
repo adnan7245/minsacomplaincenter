@@ -20,7 +20,10 @@ import {
   ShieldAlert,
   ArrowLeft,
   Filter,
-  Globe
+  Globe,
+  Palette,
+  RotateCcw,
+  Sparkles
 } from 'lucide-react';
 import { SubmittedComplaintRecord, StoreSettings } from '../../types';
 import {
@@ -472,7 +475,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, onSettingsUpdat
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-bold text-[#6d4c41] mb-1">
-                      Contact Phone Number (فون نمبر):
+                      Contact Phone Number (فون نمبر) <span className="text-[10px] font-normal text-[#8d7b6d]">(Optional)</span>:
                     </label>
                     <div className="relative">
                       <Phone className="w-4 h-4 text-[#8d7b6d] absolute left-3 top-1/2 -translate-y-1/2" />
@@ -482,9 +485,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, onSettingsUpdat
                         onChange={(e) =>
                           setSettingsForm({ ...settingsForm, phoneNumber: e.target.value })
                         }
-                        placeholder="03018463706"
+                        placeholder="e.g. 03018463706 (یا خالی چھوڑ دیں)"
                         className="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl border border-[#d7ccc8] focus:border-[#6d4c41] focus:ring-2 focus:ring-[#6d4c41]/20 outline-hidden bg-[#fdfaf8]"
-                        required
                       />
                     </div>
                   </div>
@@ -492,7 +494,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, onSettingsUpdat
                   {/* WhatsApp Number */}
                   <div>
                     <label className="block text-xs font-bold text-[#6d4c41] mb-1">
-                      WhatsApp Number (واٹس ایپ نمبر):
+                      WhatsApp Number (واٹس ایپ نمبر) <span className="text-[10px] font-normal text-[#8d7b6d]">(Optional)</span>:
                     </label>
                     <div className="relative">
                       <MessageSquare className="w-4 h-4 text-emerald-600 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -502,9 +504,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, onSettingsUpdat
                         onChange={(e) =>
                           setSettingsForm({ ...settingsForm, whatsappNumber: e.target.value })
                         }
-                        placeholder="923018463706"
+                        placeholder="e.g. 923018463706 (یا خالی چھوڑ دیں)"
                         className="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl border border-[#d7ccc8] focus:border-[#6d4c41] focus:ring-2 focus:ring-[#6d4c41]/20 outline-hidden bg-[#fdfaf8]"
-                        required
                       />
                     </div>
                   </div>
@@ -565,6 +566,352 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, onSettingsUpdat
                     className="w-full p-3 text-sm rounded-xl border border-[#d7ccc8] focus:border-[#6d4c41] focus:ring-2 focus:ring-[#6d4c41]/20 outline-hidden bg-[#fdfaf8] leading-relaxed font-sans"
                     style={{ fontFamily: "'Noto Nastaliq Urdu', 'Segoe UI', Tahoma, sans-serif" }}
                   />
+                </div>
+
+                {/* Theme & Page Colors Section */}
+                <div className="pt-4 border-t border-[#eee3d8]">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <h4 className="text-sm font-serif font-bold text-[#6d4c41] flex items-center gap-1.5">
+                        <Palette className="w-4 h-4 text-[#a67c52]" />
+                        <span>Theme & Colors (پیج اور ٹیکسٹ کا رنگ)</span>
+                      </h4>
+                      <p className="text-[11px] text-[#8d7b6d]">
+                        صفحے کا پس منظر (Background) اور ٹیکسٹ کا رنگ اپنی مرضی کے مطابق تبدیل کریں
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setSettingsForm({
+                          ...settingsForm,
+                          bgColor: '#fdfaf8',
+                          textColor: '#4a423d',
+                          headerBgColor: '#6d4c41',
+                          cardBgColor: '#ffffff',
+                        })
+                      }
+                      className="text-xs text-[#8d7b6d] hover:text-[#6d4c41] flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#f4ece4] hover:bg-[#eee3d8] transition-colors border border-[#d7ccc8] cursor-pointer"
+                      title="Reset colors to default"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      <span>Reset</span>
+                    </button>
+                  </div>
+
+                  {/* Preset Themes */}
+                  <div className="mb-4">
+                    <label className="block text-[11px] font-bold text-[#6d4c41] mb-2 flex items-center gap-1">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                      <span>Quick Color Presets (تیز رفتار تھیمز):</span>
+                    </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setSettingsForm({
+                            ...settingsForm,
+                            bgColor: '#fdfaf8',
+                            textColor: '#4a423d',
+                            headerBgColor: '#6d4c41',
+                            cardBgColor: '#ffffff',
+                          })
+                        }
+                        className="p-2 rounded-xl border border-[#d7ccc8] bg-[#fdfaf8] text-left hover:border-[#6d4c41] transition-all cursor-pointer group shadow-xs"
+                      >
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <span className="w-3 h-3 rounded-full bg-[#fdfaf8] border border-[#d7ccc8]" />
+                          <span className="w-3 h-3 rounded-full bg-[#6d4c41]" />
+                          <span className="w-3 h-3 rounded-full bg-[#4a423d]" />
+                        </div>
+                        <p className="text-xs font-semibold text-[#6d4c41] group-hover:underline">🍫 Minsa Classic</p>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setSettingsForm({
+                            ...settingsForm,
+                            bgColor: '#ffffff',
+                            textColor: '#1f2937',
+                            headerBgColor: '#111827',
+                            cardBgColor: '#f9fafb',
+                          })
+                        }
+                        className="p-2 rounded-xl border border-gray-200 bg-white text-left hover:border-gray-900 transition-all cursor-pointer group shadow-xs"
+                      >
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <span className="w-3 h-3 rounded-full bg-white border border-gray-300" />
+                          <span className="w-3 h-3 rounded-full bg-gray-900" />
+                          <span className="w-3 h-3 rounded-full bg-gray-700" />
+                        </div>
+                        <p className="text-xs font-semibold text-gray-800 group-hover:underline">⚪ Clean White</p>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setSettingsForm({
+                            ...settingsForm,
+                            bgColor: '#fff5f5',
+                            textColor: '#4a2c2c',
+                            headerBgColor: '#8c333a',
+                            cardBgColor: '#ffffff',
+                          })
+                        }
+                        className="p-2 rounded-xl border border-rose-200 bg-[#fff5f5] text-left hover:border-rose-400 transition-all cursor-pointer group shadow-xs"
+                      >
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <span className="w-3 h-3 rounded-full bg-[#fff5f5] border border-rose-300" />
+                          <span className="w-3 h-3 rounded-full bg-[#8c333a]" />
+                          <span className="w-3 h-3 rounded-full bg-[#4a2c2c]" />
+                        </div>
+                        <p className="text-xs font-semibold text-rose-900 group-hover:underline">🌹 Elegant Rose</p>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setSettingsForm({
+                            ...settingsForm,
+                            bgColor: '#f0fdf4',
+                            textColor: '#14532d',
+                            headerBgColor: '#166534',
+                            cardBgColor: '#ffffff',
+                          })
+                        }
+                        className="p-2 rounded-xl border border-emerald-200 bg-[#f0fdf4] text-left hover:border-emerald-400 transition-all cursor-pointer group shadow-xs"
+                      >
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <span className="w-3 h-3 rounded-full bg-[#f0fdf4] border border-emerald-300" />
+                          <span className="w-3 h-3 rounded-full bg-[#166534]" />
+                          <span className="w-3 h-3 rounded-full bg-[#14532d]" />
+                        </div>
+                        <p className="text-xs font-semibold text-emerald-900 group-hover:underline">🌿 Soft Mint</p>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setSettingsForm({
+                            ...settingsForm,
+                            bgColor: '#18181b',
+                            textColor: '#e4e4e7',
+                            headerBgColor: '#27272a',
+                            cardBgColor: '#27272a',
+                          })
+                        }
+                        className="p-2 rounded-xl border border-zinc-700 bg-zinc-900 text-left hover:border-zinc-500 transition-all cursor-pointer group shadow-xs"
+                      >
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <span className="w-3 h-3 rounded-full bg-zinc-900 border border-zinc-700" />
+                          <span className="w-3 h-3 rounded-full bg-zinc-700" />
+                          <span className="w-3 h-3 rounded-full bg-zinc-200" />
+                        </div>
+                        <p className="text-xs font-semibold text-zinc-100 group-hover:underline">🌙 Dark Mode</p>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setSettingsForm({
+                            ...settingsForm,
+                            bgColor: '#faf5ff',
+                            textColor: '#3b0764',
+                            headerBgColor: '#581c87',
+                            cardBgColor: '#ffffff',
+                          })
+                        }
+                        className="p-2 rounded-xl border border-purple-200 bg-[#faf5ff] text-left hover:border-purple-400 transition-all cursor-pointer group shadow-xs"
+                      >
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <span className="w-3 h-3 rounded-full bg-[#faf5ff] border border-purple-300" />
+                          <span className="w-3 h-3 rounded-full bg-[#581c87]" />
+                          <span className="w-3 h-3 rounded-full bg-[#3b0764]" />
+                        </div>
+                        <p className="text-xs font-semibold text-purple-900 group-hover:underline">🟣 Royal Velvet</p>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setSettingsForm({
+                            ...settingsForm,
+                            bgColor: '#f0f9ff',
+                            textColor: '#0c4a6e',
+                            headerBgColor: '#0369a1',
+                            cardBgColor: '#ffffff',
+                          })
+                        }
+                        className="p-2 rounded-xl border border-sky-200 bg-[#f0f9ff] text-left hover:border-sky-400 transition-all cursor-pointer group shadow-xs"
+                      >
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <span className="w-3 h-3 rounded-full bg-[#f0f9ff] border border-sky-300" />
+                          <span className="w-3 h-3 rounded-full bg-[#0369a1]" />
+                          <span className="w-3 h-3 rounded-full bg-[#0c4a6e]" />
+                        </div>
+                        <p className="text-xs font-semibold text-sky-900 group-hover:underline">🌊 Ocean Blue</p>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setSettingsForm({
+                            ...settingsForm,
+                            bgColor: '#fffbe1',
+                            textColor: '#451a03',
+                            headerBgColor: '#78350f',
+                            cardBgColor: '#ffffff',
+                          })
+                        }
+                        className="p-2 rounded-xl border border-amber-200 bg-[#fffbe1] text-left hover:border-amber-400 transition-all cursor-pointer group shadow-xs"
+                      >
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <span className="w-3 h-3 rounded-full bg-[#fffbe1] border border-amber-300" />
+                          <span className="w-3 h-3 rounded-full bg-[#78350f]" />
+                          <span className="w-3 h-3 rounded-full bg-[#451a03]" />
+                        </div>
+                        <p className="text-xs font-semibold text-amber-900 group-hover:underline">☀️ Golden Sunset</p>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Individual Color Pickers */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-[#fdfaf8] p-3.5 rounded-xl border border-[#eee3d8]">
+                    {/* Page Background Color */}
+                    <div>
+                      <label className="block text-xs font-bold text-[#6d4c41] mb-1">
+                        Page Background (پیج بیک گراؤنڈ کلر):
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={settingsForm.bgColor || '#fdfaf8'}
+                          onChange={(e) =>
+                            setSettingsForm({ ...settingsForm, bgColor: e.target.value })
+                          }
+                          className="w-9 h-9 rounded-lg border border-[#d7ccc8] cursor-pointer p-0.5 bg-white"
+                        />
+                        <input
+                          type="text"
+                          value={settingsForm.bgColor || '#fdfaf8'}
+                          onChange={(e) =>
+                            setSettingsForm({ ...settingsForm, bgColor: e.target.value })
+                          }
+                          className="flex-1 px-3 py-1.5 text-xs font-mono rounded-lg border border-[#d7ccc8] bg-white text-[#4a423d]"
+                          placeholder="#fdfaf8"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Text Color */}
+                    <div>
+                      <label className="block text-xs font-bold text-[#6d4c41] mb-1">
+                        Text Color (لکھائی / ٹیکسٹ کا رنگ):
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={settingsForm.textColor || '#4a423d'}
+                          onChange={(e) =>
+                            setSettingsForm({ ...settingsForm, textColor: e.target.value })
+                          }
+                          className="w-9 h-9 rounded-lg border border-[#d7ccc8] cursor-pointer p-0.5 bg-white"
+                        />
+                        <input
+                          type="text"
+                          value={settingsForm.textColor || '#4a423d'}
+                          onChange={(e) =>
+                            setSettingsForm({ ...settingsForm, textColor: e.target.value })
+                          }
+                          className="flex-1 px-3 py-1.5 text-xs font-mono rounded-lg border border-[#d7ccc8] bg-white text-[#4a423d]"
+                          placeholder="#4a423d"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Header / Accent Color */}
+                    <div>
+                      <label className="block text-xs font-bold text-[#6d4c41] mb-1">
+                        Header / Main Accent Color (ہیڈر اور ٹائٹل کا رنگ):
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={settingsForm.headerBgColor || '#6d4c41'}
+                          onChange={(e) =>
+                            setSettingsForm({ ...settingsForm, headerBgColor: e.target.value })
+                          }
+                          className="w-9 h-9 rounded-lg border border-[#d7ccc8] cursor-pointer p-0.5 bg-white"
+                        />
+                        <input
+                          type="text"
+                          value={settingsForm.headerBgColor || '#6d4c41'}
+                          onChange={(e) =>
+                            setSettingsForm({ ...settingsForm, headerBgColor: e.target.value })
+                          }
+                          className="flex-1 px-3 py-1.5 text-xs font-mono rounded-lg border border-[#d7ccc8] bg-white text-[#4a423d]"
+                          placeholder="#6d4c41"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Card Background Color */}
+                    <div>
+                      <label className="block text-xs font-bold text-[#6d4c41] mb-1">
+                        Form / Card Background (فارم ڈبے کا بیک گراؤنڈ):
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={settingsForm.cardBgColor || '#ffffff'}
+                          onChange={(e) =>
+                            setSettingsForm({ ...settingsForm, cardBgColor: e.target.value })
+                          }
+                          className="w-9 h-9 rounded-lg border border-[#d7ccc8] cursor-pointer p-0.5 bg-white"
+                        />
+                        <input
+                          type="text"
+                          value={settingsForm.cardBgColor || '#ffffff'}
+                          onChange={(e) =>
+                            setSettingsForm({ ...settingsForm, cardBgColor: e.target.value })
+                          }
+                          className="flex-1 px-3 py-1.5 text-xs font-mono rounded-lg border border-[#d7ccc8] bg-white text-[#4a423d]"
+                          placeholder="#ffffff"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Live Mini Preview Box */}
+                  <div
+                    className="mt-3 p-3 rounded-xl border border-[#eee3d8] transition-colors"
+                    style={{ backgroundColor: settingsForm.bgColor || '#fdfaf8' }}
+                  >
+                    <p
+                      className="text-[10px] font-bold uppercase tracking-wider mb-1"
+                      style={{ color: settingsForm.headerBgColor || '#6d4c41' }}
+                    >
+                      Live Color Preview (لائیو تھیم کا نمونہ):
+                    </p>
+                    <div
+                      className="p-3 rounded-lg shadow-xs border border-black/10 transition-colors"
+                      style={{
+                        backgroundColor: settingsForm.cardBgColor || '#ffffff',
+                        color: settingsForm.textColor || '#4a423d',
+                      }}
+                    >
+                      <h5
+                        className="font-serif font-bold text-sm"
+                        style={{ color: settingsForm.headerBgColor || '#6d4c41' }}
+                      >
+                        {settingsForm.pageName || 'Minsa Fashion Store'}
+                      </h5>
+                      <p className="text-xs mt-1">
+                        یہ آپ کے منتخب کردہ بیک گراؤنڈ اور ٹیکسٹ کے رنگ کی لائیو مثال ہے۔
+                      </p>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Save Feedback Toast */}

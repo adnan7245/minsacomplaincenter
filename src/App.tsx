@@ -93,7 +93,13 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#fdfaf8] text-[#4a423d] flex flex-col font-sans selection:bg-[#eee3d8] selection:text-[#6d4c41]">
+    <div
+      className="min-h-screen flex flex-col font-sans transition-colors duration-300 selection:bg-[#eee3d8] selection:text-[#6d4c41]"
+      style={{
+        backgroundColor: settings.bgColor || '#fdfaf8',
+        color: settings.textColor || '#4a423d',
+      }}
+    >
       {/* Header */}
       <Header
         settings={settings}

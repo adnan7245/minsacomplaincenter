@@ -55,4 +55,8 @@ export interface StoreSettings {
   city: string;
   welcomeMessageUrdu: string;
   tagline?: string;
+  bgColor?: string;
+  textColor?: string;
+  headerBgColor?: string;
+  cardBgColor?: string;
 }

@@ -16,7 +16,10 @@ export const Header: React.FC<HeaderProps> = ({ settings, onOpenAdmin, isAdminOp
   return (
     <header className="relative bg-white border-b border-[#eee3d8] shadow-xs overflow-hidden">
       {/* Decorative top ribbon with store contact info */}
-      <div className="bg-[#6d4c41] text-[#fdfaf8] py-2.5 px-4 text-xs font-medium">
+      <div
+        className="text-[#fdfaf8] py-2.5 px-4 text-xs font-medium transition-colors duration-200"
+        style={{ backgroundColor: settings.headerBgColor || '#6d4c41' }}
+      >
         <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-center sm:text-left">
           <div className="flex items-center gap-4 flex-wrap justify-center sm:justify-start">
             <span className="flex items-center gap-1.5">
@@ -31,13 +34,15 @@ export const Header: React.FC<HeaderProps> = ({ settings, onOpenAdmin, isAdminOp
           </div>
 
           <div className="flex items-center gap-2.5">
-            <a
-              href={`tel:${settings.phoneNumber}`}
-              className="flex items-center gap-1.5 bg-[#5d4037] hover:bg-[#4e342e] px-3 py-1 rounded-full text-white transition-colors border border-[#8d6e63]"
-            >
-              <Phone className="w-3 h-3 text-[#d7ccc8]" />
-              <span className="font-semibold tracking-wide">{settings.phoneNumber}</span>
-            </a>
+            {settings.phoneNumber && (
+              <a
+                href={`tel:${settings.phoneNumber}`}
+                className="flex items-center gap-1.5 bg-[#5d4037] hover:bg-[#4e342e] px-3 py-1 rounded-full text-white transition-colors border border-[#8d6e63]"
+              >
+                <Phone className="w-3 h-3 text-[#d7ccc8]" />
+                <span className="font-semibold tracking-wide">{settings.phoneNumber}</span>
+              </a>
+            )}
 
             {/* Show admin button ONLY if authenticated or admin mode is active */}
             {(isAdminOpen || isAdminAuthenticated) && (
@@ -80,7 +85,10 @@ export const Header: React.FC<HeaderProps> = ({ settings, onOpenAdmin, isAdminOp
             </div>
           </div>
 
-          <h1 className="text-3xl sm:text-4xl font-serif font-bold text-[#6d4c41] tracking-tight mb-1">
+          <h1
+            className="text-3xl sm:text-4xl font-serif font-bold tracking-tight mb-1"
+            style={{ color: settings.headerBgColor || '#6d4c41' }}
+          >
             {settings.pageName || 'Minsa Fashion Store'}
           </h1>
 
