@@ -1,0 +1,608 @@
+import React, { useState, useEffect } from 'react';
+import {
+  Settings,
+  ListFilter,
+  Search,
+  RefreshCw,
+  Store,
+  Phone,
+  MapPin,
+  MessageSquare,
+  Save,
+  Check,
+  Eye,
+  Trash2,
+  Clock,
+  AlertCircle,
+  CheckCircle2,
+  X,
+  ExternalLink,
+  ShieldAlert,
+  ArrowLeft,
+  Filter,
+  Globe
+} from 'lucide-react';
+import { SubmittedComplaintRecord, StoreSettings } from '../../types';
+import {
+  getAllComplaints,
+  updateComplaintStatus,
+  deleteComplaint,
+  getCustomerWhatsAppReplyLink
+} from '../../services/complaintService';
+import { getStoreSettings, saveStoreSettings } from '../../services/settingsService';
+import { ComplaintDetailModal } from './ComplaintDetailModal';
+
+interface AdminPanelProps {
+  onClose: () => void;
+  onSettingsUpdated: (newSettings: StoreSettings) => void;
+}
+
+export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, onSettingsUpdated }) => {
+  const [activeTab, setActiveTab] = useState<'complaints' | 'settings'>('complaints');
+  const [complaints, setComplaints] = useState<SubmittedComplaintRecord[]>([]);
+  const [settings, setSettings] = useState<StoreSettings>({
+    pageName: 'Minsa Fashion Store',
+    phoneNumber: '03018463706',
+    whatsappNumber: '923018463706',
+    address: 'Faisalabad, Pakistan',
+    city: 'Faisalabad',
+    tagline: 'Online Ladies Suiting • Premium Pakistani Collections',
+    welcomeMessageUrdu: 'ہم اپنے صارفین کی شکایات کو اہمیت دیتے ہیں۔ اگر آپ کو اپنے آرڈر میں کسی قسم کا مسئلہ یا شکایت ہے تو نیچے دیا گیا فارم مکمل کریں۔ ہماری ٹیم آپ کی شکایت کا جائزہ لے کر جلد از جلد آپ سے رابطہ کرے گی۔',
+  });
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // Search & Filter state for Complaints
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'All' | 'Pending' | 'Under Review' | 'Resolved'>('All');
+  const [selectedComplaint, setSelectedComplaint] = useState<SubmittedComplaintRecord | null>(null);
+
+  // Settings form state
+  const [settingsForm, setSettingsForm] = useState<StoreSettings>(settings);
+
+  // Load initial data
+  const loadData = async () => {
+    setIsLoading(true);
+    try {
+      const [fetchedSettings, fetchedComplaints] = await Promise.all([
+        getStoreSettings(),
+        getAllComplaints(),
+      ]);
+      setSettings(fetchedSettings);
+      setSettingsForm(fetchedSettings);
+      setComplaints(fetchedComplaints);
+    } catch (e) {
+      console.error('Error loading admin data:', e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  // Save Settings
+  const handleSaveSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingSettings(true);
+    setSaveSuccess(false);
+
+    try {
+      const updated = await saveStoreSettings(settingsForm);
+      setSettings(updated);
+      onSettingsUpdated(updated);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (error) {
+      console.error('Failed to save settings:', error);
+      alert('سیٹنگز محفوظ کرنے میں مسئلہ پیش آیا!');
+    } finally {
+      setIsSavingSettings(false);
+    }
+  };
+
+  // Status Update Handler
+  const handleStatusChange = async (id: string, newStatus: 'Pending' | 'Under Review' | 'Resolved') => {
+    await updateComplaintStatus(id, newStatus);
+    setComplaints((prev) =>
+      prev.map((c) => (c.id === id || c.complaintNumber === id ? { ...c, status: newStatus } : c))
+    );
+    if (selectedComplaint && (selectedComplaint.id === id || selectedComplaint.complaintNumber === id)) {
+      setSelectedComplaint((prev) => (prev ? { ...prev, status: newStatus } : null));
+    }
+  };
+
+  // Delete Complaint Handler
+  const handleDeleteComplaint = async (id: string, complaintNumber: string) => {
+    if (window.confirm(`کیا آپ واقعی شکایت #${complaintNumber} ڈیلیٹ کرنا چاہتے ہیں؟`)) {
+      await deleteComplaint(id);
+      setComplaints((prev) => prev.filter((c) => c.id !== id && c.complaintNumber !== id));
+      if (selectedComplaint && (selectedComplaint.id === id || selectedComplaint.complaintNumber === id)) {
+        setSelectedComplaint(null);
+      }
+    }
+  };
+
+  // Filtered complaints calculation
+  const filteredComplaints = complaints.filter((c) => {
+    const matchesSearch =
+      c.complaintNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.contactNumber.includes(searchTerm) ||
+      c.trackingNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.city.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesStatus = statusFilter === 'All' || c.status === statusFilter;
+
+    return matchesSearch && matchesStatus;
+  });
+
+  const pendingCount = complaints.filter((c) => c.status === 'Pending').length;
+  const reviewCount = complaints.filter((c) => c.status === 'Under Review').length;
+  const resolvedCount = complaints.filter((c) => c.status === 'Resolved').length;
+
+  return (
+    <div className="bg-white rounded-2xl border border-[#eee3d8] shadow-xl overflow-hidden mb-12">
+      {/* Top Admin Navigation Header */}
+      <div className="bg-[#6d4c41] text-white p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#8d6e63] pb-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-[#5d4037] rounded-xl border border-[#8d6e63]">
+              <Store className="w-6 h-6 text-[#d7ccc8]" />
+            </div>
+            <div>
+              <h2 className="text-xl sm:text-2xl font-serif font-bold tracking-tight">
+                Admin Panel (ایڈمن پینل)
+              </h2>
+              <p className="text-xs text-[#d7ccc8]">
+                {settings.pageName} • Management System
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={onClose}
+            className="self-start sm:self-auto flex items-center gap-1.5 px-3.5 py-1.5 bg-[#5d4037] hover:bg-[#4e342e] text-xs font-semibold rounded-xl border border-[#8d6e63] transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4 text-[#d7ccc8]" />
+            <span>Back to Store View</span>
+          </button>
+        </div>
+
+        {/* Menu Tabs Navigation */}
+        <div className="flex items-center gap-2 mt-4 overflow-x-auto pb-1">
+          <button
+            onClick={() => setActiveTab('complaints')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === 'complaints'
+                ? 'bg-white text-[#6d4c41] shadow-md'
+                : 'bg-[#5d4037]/60 text-[#e5dcd3] hover:bg-[#5d4037]'
+            }`}
+          >
+            <ListFilter className="w-4 h-4" />
+            <span>Complain List (شکایات کی فہرست)</span>
+            <span
+              className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                activeTab === 'complaints'
+                  ? 'bg-[#f4ece4] text-[#6d4c41]'
+                  : 'bg-[#4e342e] text-white'
+              }`}
+            >
+              {complaints.length}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('settings')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === 'settings'
+                ? 'bg-white text-[#6d4c41] shadow-md'
+                : 'bg-[#5d4037]/60 text-[#e5dcd3] hover:bg-[#5d4037]'
+            }`}
+          >
+            <Settings className="w-4 h-4" />
+            <span>Setting (سیٹنگ)</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Main Tab Content */}
+      <div className="p-4 sm:p-6 bg-[#fdfaf8] min-h-[500px]">
+        {activeTab === 'complaints' ? (
+          /* TAB 1: COMPLAIN LIST */
+          <div className="space-y-6">
+            {/* Counter Cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="bg-white p-3.5 rounded-xl border border-[#eee3d8] shadow-2xs">
+                <p className="text-[11px] font-medium text-[#8d7b6d]">Total Complaints</p>
+                <p className="text-xl font-bold text-[#4a423d] mt-1">{complaints.length}</p>
+              </div>
+
+              <div className="bg-rose-50 p-3.5 rounded-xl border border-rose-100 shadow-2xs">
+                <p className="text-[11px] font-semibold text-rose-800 flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5 text-rose-600" />
+                  Pending
+                </p>
+                <p className="text-xl font-bold text-rose-900 mt-1">{pendingCount}</p>
+              </div>
+
+              <div className="bg-amber-50 p-3.5 rounded-xl border border-amber-100 shadow-2xs">
+                <p className="text-[11px] font-semibold text-amber-800 flex items-center gap-1">
+                  <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
+                  Under Review
+                </p>
+                <p className="text-xl font-bold text-amber-900 mt-1">{reviewCount}</p>
+              </div>
+
+              <div className="bg-emerald-50 p-3.5 rounded-xl border border-emerald-100 shadow-2xs">
+                <p className="text-[11px] font-semibold text-emerald-800 flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                  Resolved
+                </p>
+                <p className="text-xl font-bold text-emerald-900 mt-1">{resolvedCount}</p>
+              </div>
+            </div>
+
+            {/* Search and Filters Bar */}
+            <div className="bg-white p-4 rounded-xl border border-[#eee3d8] shadow-2xs flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="relative w-full md:w-80">
+                <Search className="w-4 h-4 text-[#8d7b6d] absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search by Complaint #, Name, Phone..."
+                  className="w-full pl-9 pr-8 py-2 text-xs rounded-xl border border-[#d7ccc8] focus:border-[#6d4c41] outline-hidden bg-[#fdfaf8]"
+                />
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap w-full md:w-auto justify-start sm:justify-end">
+                <span className="text-xs font-semibold text-[#8d7b6d] flex items-center gap-1">
+                  <Filter className="w-3.5 h-3.5" />
+                  Filter:
+                </span>
+                {(['All', 'Pending', 'Under Review', 'Resolved'] as const).map((st) => (
+                  <button
+                    key={st}
+                    onClick={() => setStatusFilter(st)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                      statusFilter === st
+                        ? 'bg-[#6d4c41] text-white shadow-2xs'
+                        : 'bg-[#f4ece4] text-[#6d4c41] hover:bg-[#eee3d8]'
+                    }`}
+                  >
+                    {st}
+                  </button>
+                ))}
+
+                <button
+                  onClick={loadData}
+                  className="p-2 bg-white hover:bg-[#f4ece4] border border-[#d7ccc8] text-[#6d4c41] rounded-lg transition-colors ml-auto md:ml-2"
+                  title="Refresh Data"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+                </button>
+              </div>
+            </div>
+
+            {/* Complaints List Table / Cards */}
+            {isLoading ? (
+              <div className="py-12 text-center text-xs text-[#8d7b6d]">
+                <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-[#a67c52]" />
+                Loading complaints...
+              </div>
+            ) : filteredComplaints.length === 0 ? (
+              <div className="bg-white p-8 rounded-xl border border-[#eee3d8] text-center space-y-2">
+                <ShieldAlert className="w-10 h-10 text-[#a67c52] mx-auto opacity-40" />
+                <h3 className="text-sm font-bold text-[#4a423d]">کوئی شکایت نہیں ملی</h3>
+                <p className="text-xs text-[#8d7b6d]">
+                  {searchTerm || statusFilter !== 'All'
+                    ? 'آپ کے فلٹر کے مطابق کوئی ریکارڈ موجود نہیں۔'
+                    : 'فی الحال کسی صارف نے کوئی شکایت درج نہیں کروائی۔'}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {filteredComplaints.map((c) => (
+                  <div
+                    key={c.id}
+                    className="bg-white rounded-xl border border-[#eee3d8] p-4 shadow-2xs hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#eee3d8] pb-3 mb-3">
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <span className="font-mono text-xs font-bold bg-[#f4ece4] text-[#6d4c41] px-2.5 py-1 rounded-lg border border-[#eee3d8]">
+                          #{c.complaintNumber}
+                        </span>
+                        <span className="text-xs text-[#8d7b6d] font-medium">{c.formattedDate}</span>
+                        <span className="text-xs bg-[#fdfaf8] text-[#4a423d] px-2 py-0.5 rounded border border-[#eee3d8] font-mono">
+                          Tracking: {c.trackingNumber}
+                        </span>
+                      </div>
+
+                      {/* Status Selector */}
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-semibold text-[#8d7b6d]">Status:</span>
+                        <select
+                          value={c.status}
+                          onChange={(e) =>
+                            handleStatusChange(
+                              c.id,
+                              e.target.value as 'Pending' | 'Under Review' | 'Resolved'
+                            )
+                          }
+                          className={`text-xs font-bold px-2.5 py-1 rounded-lg border outline-hidden cursor-pointer ${
+                            c.status === 'Resolved'
+                              ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                              : c.status === 'Under Review'
+                              ? 'bg-amber-50 text-amber-800 border-amber-300'
+                              : 'bg-rose-50 text-rose-800 border-rose-300'
+                          }`}
+                        >
+                          <option value="Pending">Pending</option>
+                          <option value="Under Review">Under Review</option>
+                          <option value="Resolved">Resolved</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+                      <div>
+                        <span className="text-[#8d7b6d] font-medium">Customer:</span>
+                        <p className="font-bold text-[#4a423d] text-sm mt-0.5">{c.customerName}</p>
+                        <p className="text-[#6d4c41] font-semibold flex items-center gap-1 mt-0.5">
+                          <Phone className="w-3 h-3 text-[#a67c52]" />
+                          {c.contactNumber}
+                        </p>
+                      </div>
+
+                      <div>
+                        <span className="text-[#8d7b6d] font-medium">City & Address:</span>
+                        <p className="font-semibold text-[#4a423d] mt-0.5">{c.city}</p>
+                        <p className="text-[#8d7b6d] truncate max-w-xs">{c.address}</p>
+                      </div>
+
+                      <div>
+                        <span className="text-[#8d7b6d] font-medium">Complaint Details:</span>
+                        <p className="text-[#4a423d] line-clamp-2 italic mt-0.5">
+                          "{c.complaintDescription}"
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Actions Bar */}
+                    <div className="mt-4 pt-3 border-t border-[#eee3d8] flex items-center justify-between gap-2 flex-wrap">
+                      <div className="flex items-center gap-2">
+                        {c.orderedProductImageDataUrl && (
+                          <span className="text-[11px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                            ✓ Ordered Pic attached
+                          </span>
+                        )}
+                        {c.receivedProductImageDataUrl && (
+                          <span className="text-[11px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                            ✓ Received Pic attached
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <a
+                          href={getCustomerWhatsAppReplyLink(
+                            c.contactNumber,
+                            c.complaintNumber,
+                            c.customerName,
+                            c.status,
+                            settings.pageName
+                          )}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors shadow-2xs"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5" />
+                          <span>Reply WhatsApp</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+
+                        <button
+                          onClick={() => setSelectedComplaint(c)}
+                          className="px-3 py-1.5 bg-[#f4ece4] hover:bg-[#eee3d8] text-[#6d4c41] text-xs font-semibold rounded-lg flex items-center gap-1 transition-colors border border-[#d7ccc8]"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>View Details</span>
+                        </button>
+
+                        <button
+                          onClick={() => handleDeleteComplaint(c.id, c.complaintNumber)}
+                          className="p-1.5 text-rose-600 hover:text-rose-800 hover:bg-rose-50 rounded-lg transition-colors"
+                          title="Delete Complaint"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          /* TAB 2: SETTING */
+          <div className="max-w-2xl mx-auto space-y-6">
+            <div className="bg-white p-6 rounded-2xl border border-[#eee3d8] shadow-sm">
+              <div className="border-b border-[#eee3d8] pb-4 mb-6">
+                <h3 className="text-lg font-serif font-bold text-[#6d4c41] flex items-center gap-2">
+                  <Settings className="w-5 h-5 text-[#a67c52]" />
+                  Website Settings (پلیٹ فارم کی ترتیبات)
+                </h3>
+                <p className="text-xs text-[#8d7b6d] mt-1">
+                  یہاں سے آپ اپنی ویب سائٹ کا نام، فون نمبر، واٹس ایپ نمبر، اور پتہ تبدیل کر سکتے ہیں۔
+                </p>
+              </div>
+
+              <form onSubmit={handleSaveSettings} className="space-y-4">
+                {/* Website Name / Page Title */}
+                <div>
+                  <label className="block text-xs font-bold text-[#6d4c41] mb-1">
+                    Website / Page Name (صفحے کا نام):
+                  </label>
+                  <div className="relative">
+                    <Store className="w-4 h-4 text-[#8d7b6d] absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      value={settingsForm.pageName}
+                      onChange={(e) => setSettingsForm({ ...settingsForm, pageName: e.target.value })}
+                      placeholder="Minsa Fashion Store"
+                      className="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl border border-[#d7ccc8] focus:border-[#6d4c41] focus:ring-2 focus:ring-[#6d4c41]/20 outline-hidden bg-[#fdfaf8]"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Phone Number */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-[#6d4c41] mb-1">
+                      Contact Phone Number (فون نمبر):
+                    </label>
+                    <div className="relative">
+                      <Phone className="w-4 h-4 text-[#8d7b6d] absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        value={settingsForm.phoneNumber}
+                        onChange={(e) =>
+                          setSettingsForm({ ...settingsForm, phoneNumber: e.target.value })
+                        }
+                        placeholder="03018463706"
+                        className="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl border border-[#d7ccc8] focus:border-[#6d4c41] focus:ring-2 focus:ring-[#6d4c41]/20 outline-hidden bg-[#fdfaf8]"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  {/* WhatsApp Number */}
+                  <div>
+                    <label className="block text-xs font-bold text-[#6d4c41] mb-1">
+                      WhatsApp Number (واٹس ایپ نمبر):
+                    </label>
+                    <div className="relative">
+                      <MessageSquare className="w-4 h-4 text-emerald-600 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        value={settingsForm.whatsappNumber}
+                        onChange={(e) =>
+                          setSettingsForm({ ...settingsForm, whatsappNumber: e.target.value })
+                        }
+                        placeholder="923018463706"
+                        className="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl border border-[#d7ccc8] focus:border-[#6d4c41] focus:ring-2 focus:ring-[#6d4c41]/20 outline-hidden bg-[#fdfaf8]"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Address & City */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-[#6d4c41] mb-1">
+                      Store Address / Location (پتہ):
+                    </label>
+                    <div className="relative">
+                      <MapPin className="w-4 h-4 text-[#8d7b6d] absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        value={settingsForm.address}
+                        onChange={(e) =>
+                          setSettingsForm({ ...settingsForm, address: e.target.value })
+                        }
+                        placeholder="Faisalabad, Pakistan"
+                        className="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl border border-[#d7ccc8] focus:border-[#6d4c41] focus:ring-2 focus:ring-[#6d4c41]/20 outline-hidden bg-[#fdfaf8]"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-[#6d4c41] mb-1">
+                      City (شہر):
+                    </label>
+                    <div className="relative">
+                      <Globe className="w-4 h-4 text-[#8d7b6d] absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        value={settingsForm.city}
+                        onChange={(e) =>
+                          setSettingsForm({ ...settingsForm, city: e.target.value })
+                        }
+                        placeholder="Faisalabad"
+                        className="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl border border-[#d7ccc8] focus:border-[#6d4c41] focus:ring-2 focus:ring-[#6d4c41]/20 outline-hidden bg-[#fdfaf8]"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Urdu Welcome Message */}
+                <div>
+                  <label className="block text-xs font-bold text-[#6d4c41] mb-1">
+                    Urdu Welcome Message (اردو پیغام):
+                  </label>
+                  <textarea
+                    dir="rtl"
+                    rows={3}
+                    value={settingsForm.welcomeMessageUrdu}
+                    onChange={(e) =>
+                      setSettingsForm({ ...settingsForm, welcomeMessageUrdu: e.target.value })
+                    }
+                    className="w-full p-3 text-sm rounded-xl border border-[#d7ccc8] focus:border-[#6d4c41] focus:ring-2 focus:ring-[#6d4c41]/20 outline-hidden bg-[#fdfaf8] leading-relaxed font-sans"
+                    style={{ fontFamily: "'Noto Nastaliq Urdu', 'Segoe UI', Tahoma, sans-serif" }}
+                  />
+                </div>
+
+                {/* Save Feedback Toast */}
+                {saveSuccess && (
+                  <div className="p-3 bg-emerald-100 text-emerald-800 text-xs font-semibold rounded-xl border border-emerald-200 flex items-center gap-2">
+                    <Check className="w-4 h-4 text-emerald-600" />
+                    <span>سیٹنگز کامیابی کے ساتھ محفوظ ہو گئی ہیں! (Settings saved successfully)</span>
+                  </div>
+                )}
+
+                {/* Save Button */}
+                <button
+                  type="submit"
+                  disabled={isSavingSettings}
+                  className="w-full py-3 px-4 bg-[#6d4c41] hover:bg-[#5d4037] text-white text-sm font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 mt-4"
+                >
+                  {isSavingSettings ? (
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Save className="w-4 h-4" />
+                  )}
+                  <span>Save Settings (سیٹنگز محفوظ کریں)</span>
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Complaint Detail Popup Modal */}
+      {selectedComplaint && (
+        <ComplaintDetailModal
+          complaint={selectedComplaint}
+          settings={settings}
+          onClose={() => setSelectedComplaint(null)}
+          onUpdateStatus={handleStatusChange}
+        />
+      )}
+    </div>
+  );
+};

@@ -46,3 +46,13 @@ export interface SubmittedComplaintRecord {
   formattedDate: string;
   status: 'Pending' | 'Under Review' | 'Resolved';
 }
+
+export interface StoreSettings {
+  pageName: string;
+  phoneNumber: string;
+  whatsappNumber: string;
+  address: string;
+  city: string;
+  welcomeMessageUrdu: string;
+  tagline?: string;
+}

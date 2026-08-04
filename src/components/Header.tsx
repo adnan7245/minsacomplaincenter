@@ -1,11 +1,18 @@
 import React from 'react';
-import { Phone, MapPin, ShoppingBag, ShieldCheck, HeartHandshake } from 'lucide-react';
+import { Phone, MapPin, ShoppingBag, ShieldCheck, HeartHandshake, UserCheck } from 'lucide-react';
+import { StoreSettings } from '../types';
 
-// Using generated image paths or fallbacks
 import logoImg from '../assets/images/minsa_store_logo_1785425219725.jpg';
 import bannerImg from '../assets/images/minsa_fashion_banner_1785425201580.jpg';
 
-export const Header: React.FC = () => {
+interface HeaderProps {
+  settings: StoreSettings;
+  onOpenAdmin: () => void;
+  isAdminOpen?: boolean;
+  isAdminAuthenticated?: boolean;
+}
+
+export const Header: React.FC<HeaderProps> = ({ settings, onOpenAdmin, isAdminOpen, isAdminAuthenticated }) => {
   return (
     <header className="relative bg-white border-b border-[#eee3d8] shadow-xs overflow-hidden">
       {/* Decorative top ribbon with store contact info */}
@@ -14,22 +21,35 @@ export const Header: React.FC = () => {
           <div className="flex items-center gap-4 flex-wrap justify-center sm:justify-start">
             <span className="flex items-center gap-1.5">
               <ShoppingBag className="w-3.5 h-3.5 text-[#a67c52]" />
-              <span>Online Ladies Suiting</span>
+              <span>{settings.tagline || 'Online Ladies Suiting'}</span>
             </span>
             <span className="hidden sm:inline text-[#a67c52]">•</span>
             <span className="flex items-center gap-1.5">
               <MapPin className="w-3.5 h-3.5 text-[#a67c52]" />
-              <span>Faisalabad, Pakistan</span>
+              <span>{settings.address || 'Faisalabad, Pakistan'}</span>
             </span>
           </div>
-          <div className="flex items-center gap-3">
+
+          <div className="flex items-center gap-2.5">
             <a
-              href="tel:03018463706"
+              href={`tel:${settings.phoneNumber}`}
               className="flex items-center gap-1.5 bg-[#5d4037] hover:bg-[#4e342e] px-3 py-1 rounded-full text-white transition-colors border border-[#8d6e63]"
             >
               <Phone className="w-3 h-3 text-[#d7ccc8]" />
-              <span className="font-semibold tracking-wide">03018463706</span>
+              <span className="font-semibold tracking-wide">{settings.phoneNumber}</span>
             </a>
+
+            {/* Show admin button ONLY if authenticated or admin mode is active */}
+            {(isAdminOpen || isAdminAuthenticated) && (
+              <button
+                onClick={onOpenAdmin}
+                className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer border bg-amber-500 text-white border-amber-400 shadow-xs"
+                title="Admin Panel"
+              >
+                <UserCheck className="w-3.5 h-3.5" />
+                <span>Admin Active</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -40,7 +60,7 @@ export const Header: React.FC = () => {
         <div className="absolute inset-0 opacity-10 overflow-hidden pointer-events-none">
           <img
             src={bannerImg}
-            alt="Minsa Fashion Banner"
+            alt="Store Banner"
             className="w-full h-full object-cover object-center"
             referrerPolicy="no-referrer"
           />
@@ -53,7 +73,7 @@ export const Header: React.FC = () => {
             <div className="w-16 h-16 rounded-full p-1 bg-gradient-to-tr from-[#a67c52] via-[#8d7b6d] to-[#6d4c41] shadow-md">
               <img
                 src={logoImg}
-                alt="Minsa Logo"
+                alt="Store Logo"
                 className="w-full h-full object-cover rounded-full bg-white"
                 referrerPolicy="no-referrer"
               />
@@ -61,7 +81,7 @@ export const Header: React.FC = () => {
           </div>
 
           <h1 className="text-3xl sm:text-4xl font-serif font-bold text-[#6d4c41] tracking-tight mb-1">
-            Minsa Fashion Store
+            {settings.pageName || 'Minsa Fashion Store'}
           </h1>
 
           <div className="mt-1 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#f4ece4] border border-[#eee3d8] text-[#a67c52] text-xs sm:text-sm font-semibold uppercase tracking-[0.18em]">
@@ -79,7 +99,7 @@ export const Header: React.FC = () => {
               className="text-base sm:text-lg text-[#4a423d] italic font-normal leading-relaxed text-center tracking-normal font-sans"
               style={{ fontFamily: "'Noto Nastaliq Urdu', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}
             >
-              "ہم اپنے صارفین کی شکایات کو اہمیت دیتے ہیں۔ اگر آپ کو اپنے آرڈر میں کسی قسم کا مسئلہ یا شکایت ہے تو نیچے دیا گیا فارم مکمل کریں۔ ہماری ٹیم آپ کی شکایت کا جائزہ لے کر جلد از جلد آپ سے رابطہ کرے گی۔"
+              "{settings.welcomeMessageUrdu || 'ہم اپنے صارفین کی شکایات کو اہمیت دیتے ہیں۔ اگر آپ کو اپنے آرڈر میں کسی قسم کا مسئلہ یا شکایت ہے تو نیچے دیا گیا فارم مکمل کریں۔ ہماری ٹیم آپ کی شکایت کا جائزہ لے کر جلد از جلد آپ سے رابطہ کرے گی۔'}"
             </p>
           </div>
 

@@ -119,7 +119,6 @@ export async function submitComplaint(
 
   if (supabase) {
     try {
-      // Insert record into exact 'Complaints' table (case-sensitive schema public)
       const { data, error: insertError } = await supabase
         .from('Complaints')
         .insert([dbPayload])
@@ -176,11 +175,187 @@ export async function submitComplaint(
 }
 
 /**
+ * Fetches all complaints from Supabase database or LocalStorage cache
+ */
+export async function getAllComplaints(): Promise<SubmittedComplaintRecord[]> {
+  const supabase = getSupabase();
+  let supabaseRecords: SubmittedComplaintRecord[] = [];
+
+  if (supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('Complaints')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (data && !error) {
+        supabaseRecords = data.map((item: any) => {
+          const dt = item.created_at ? new Date(item.created_at) : new Date();
+          return {
+            id: String(item.id || item.complaint_number),
+            complaintNumber: item.complaint_number || '',
+            trackingNumber: item.tracking_number || '',
+            orderDate: item.order_date || '',
+            customerName: item.customer_name || '',
+            contactNumber: item.contact_number || '',
+            address: item.address || '',
+            city: item.city || '',
+            orderedProductImageDataUrl: item.ordered_product_image_url || '',
+            receivedProductImageDataUrl: item.received_product_image_url || '',
+            complaintDescription: item.complaint_description || '',
+            submissionTimestamp: item.created_at || dt.toISOString(),
+            formattedDate: dt.toLocaleDateString('en-PK', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+            }),
+            status: (item.status as 'Pending' | 'Under Review' | 'Resolved') || 'Pending',
+          };
+        });
+      }
+    } catch (err) {
+      console.warn('Error reading complaints from Supabase:', err);
+    }
+  }
+
+  // Load local cache fallback
+  let localRecords: SubmittedComplaintRecord[] = [];
+  try {
+    const cached = localStorage.getItem(STORAGE_KEY);
+    if (cached) {
+      localRecords = JSON.parse(cached);
+    }
+  } catch (e) {
+    console.warn('LocalStorage load error:', e);
+  }
+
+  // Merge unique by complaintNumber or id
+  if (supabaseRecords.length > 0) {
+    // Save to local storage as fresh cache
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(supabaseRecords));
+    } catch (e) {}
+    return supabaseRecords;
+  }
+
+  return localRecords;
+}
+
+/**
+ * Updates complaint status in Supabase & LocalStorage
+ */
+export async function updateComplaintStatus(
+  id: string,
+  newStatus: 'Pending' | 'Under Review' | 'Resolved'
+): Promise<boolean> {
+  const supabase = getSupabase();
+
+  // 1. Update in Supabase
+  if (supabase) {
+    try {
+      // Try by id first
+      let { error } = await supabase
+        .from('Complaints')
+        .update({ status: newStatus })
+        .eq('id', id);
+
+      if (error) {
+        // Fallback by complaint_number
+        await supabase
+          .from('Complaints')
+          .update({ status: newStatus })
+          .eq('complaint_number', id);
+      }
+    } catch (err) {
+      console.warn('Error updating status in Supabase:', err);
+    }
+  }
+
+  // 2. Update in LocalStorage
+  try {
+    const cached = localStorage.getItem(STORAGE_KEY);
+    if (cached) {
+      const records: SubmittedComplaintRecord[] = JSON.parse(cached);
+      const updated = records.map((rec) =>
+        rec.id === id || rec.complaintNumber === id ? { ...rec, status: newStatus } : rec
+      );
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    }
+  } catch (e) {
+    console.warn('LocalStorage status update error:', e);
+  }
+
+  return true;
+}
+
+/**
+ * Deletes a complaint record
+ */
+export async function deleteComplaint(id: string): Promise<boolean> {
+  const supabase = getSupabase();
+
+  if (supabase) {
+    try {
+      let { error } = await supabase.from('Complaints').delete().eq('id', id);
+      if (error) {
+        await supabase.from('Complaints').delete().eq('complaint_number', id);
+      }
+    } catch (err) {
+      console.warn('Error deleting from Supabase:', err);
+    }
+  }
+
+  try {
+    const cached = localStorage.getItem(STORAGE_KEY);
+    if (cached) {
+      const records: SubmittedComplaintRecord[] = JSON.parse(cached);
+      const filtered = records.filter((rec) => rec.id !== id && rec.complaintNumber !== id);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
+    }
+  } catch (e) {
+    console.warn('LocalStorage delete error:', e);
+  }
+
+  return true;
+}
+
+/**
  * Generates the WhatsApp pre-filled contact URL.
  */
-export function getWhatsAppLink(complaintNumber: string): string {
-  const message = `Assalam o Alaikum, I have submitted a complaint to Minsa Fashion Store. My Complaint Number is ${complaintNumber}.`;
-  return `https://wa.me/${WHATSAPP_INTL_NUMBER}?text=${encodeURIComponent(message)}`;
+export function getWhatsAppLink(
+  complaintNumber: string,
+  customStoreName: string = 'Minsa Fashion Store',
+  customWhatsAppNum: string = WHATSAPP_INTL_NUMBER
+): string {
+  const message = `Assalam o Alaikum, I have submitted a complaint to ${customStoreName}. My Complaint Number is ${complaintNumber}.`;
+  let targetPhone = customWhatsAppNum.replace(/[^\d]/g, '');
+  if (targetPhone.startsWith('03')) {
+    targetPhone = '92' + targetPhone.substring(1);
+  }
+  return `https://wa.me/${targetPhone || WHATSAPP_INTL_NUMBER}?text=${encodeURIComponent(message)}`;
+}
+
+/**
+ * Direct WhatsApp reply link from Admin to Customer
+ */
+export function getCustomerWhatsAppReplyLink(
+  customerPhone: string,
+  complaintNumber: string,
+  customerName: string,
+  status: string,
+  storeName: string
+): string {
+  let phone = customerPhone.replace(/[^\d]/g, '');
+  if (phone.startsWith('03')) {
+    phone = '92' + phone.substring(1);
+  } else if (phone.startsWith('3') && phone.length === 10) {
+    phone = '92' + phone;
+  }
+
+  const message = `Assalam o Alaikum ${customerName},\nThis is regarding your complaint #${complaintNumber} at ${storeName}.\nStatus: ${status}.\n\nHow can we assist you further?`;
+  return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 }
 
 /**
