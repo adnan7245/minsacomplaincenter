@@ -6,6 +6,7 @@ import { SuccessView } from './components/SuccessView';
 import { Footer } from './components/Footer';
 import { AdminPanel } from './components/Admin/AdminPanel';
 import { AdminLoginModal } from './components/Admin/AdminLoginModal';
+import { CheckStatusModal } from './components/CheckStatusModal';
 import { ComplaintFormData, SubmittedComplaintRecord, StoreSettings } from './types';
 import { submitComplaint } from './services/complaintService';
 import { getStoreSettings, DEFAULT_SETTINGS } from './services/settingsService';
@@ -14,6 +15,9 @@ export default function App() {
   const [settings, setSettings] = useState<StoreSettings>(DEFAULT_SETTINGS);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedRecord, setSubmittedRecord] = useState<SubmittedComplaintRecord | null>(null);
+
+  // Check Status Modal state
+  const [isCheckStatusOpen, setIsCheckStatusOpen] = useState(false);
 
   // Admin panel state
   const [isAdminOpen, setIsAdminOpen] = useState(false);
@@ -104,6 +108,7 @@ export default function App() {
       <Header
         settings={settings}
         onOpenAdmin={handleOpenAdminTrigger}
+        onOpenCheckStatus={() => setIsCheckStatusOpen(true)}
         isAdminOpen={isAdminOpen}
         isAdminAuthenticated={isAdminAuthenticated}
       />
@@ -147,6 +152,13 @@ export default function App() {
           )}
         </AnimatePresence>
       </main>
+
+      {/* Customer Complaint Status Check Modal */}
+      <CheckStatusModal
+        isOpen={isCheckStatusOpen}
+        onClose={() => setIsCheckStatusOpen(false)}
+        settings={settings}
+      />
 
       {/* Admin Verification Modal */}
       <AdminLoginModal

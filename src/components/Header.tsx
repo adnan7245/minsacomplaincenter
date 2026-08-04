@@ -1,5 +1,5 @@
 import React from 'react';
-import { Phone, MapPin, ShoppingBag, ShieldCheck, HeartHandshake, UserCheck } from 'lucide-react';
+import { Phone, MapPin, ShoppingBag, ShieldCheck, HeartHandshake, UserCheck, Search } from 'lucide-react';
 import { StoreSettings } from '../types';
 
 import logoImg from '../assets/images/minsa_store_logo_1785425219725.jpg';
@@ -8,11 +8,18 @@ import bannerImg from '../assets/images/minsa_fashion_banner_1785425201580.jpg';
 interface HeaderProps {
   settings: StoreSettings;
   onOpenAdmin: () => void;
+  onOpenCheckStatus: () => void;
   isAdminOpen?: boolean;
   isAdminAuthenticated?: boolean;
 }
 
-export const Header: React.FC<HeaderProps> = ({ settings, onOpenAdmin, isAdminOpen, isAdminAuthenticated }) => {
+export const Header: React.FC<HeaderProps> = ({
+  settings,
+  onOpenAdmin,
+  onOpenCheckStatus,
+  isAdminOpen,
+  isAdminAuthenticated,
+}) => {
   return (
     <header className="relative bg-white border-b border-[#eee3d8] shadow-xs overflow-hidden">
       {/* Decorative top ribbon with store contact info */}
@@ -34,6 +41,14 @@ export const Header: React.FC<HeaderProps> = ({ settings, onOpenAdmin, isAdminOp
           </div>
 
           <div className="flex items-center gap-2.5">
+            <button
+              onClick={onOpenCheckStatus}
+              className="flex items-center gap-1.5 bg-[#8d6e63] hover:bg-[#6d4c41] px-3 py-1 rounded-full text-white text-xs font-semibold transition-colors border border-[#a1887f] cursor-pointer shadow-2xs"
+            >
+              <Search className="w-3 h-3 text-[#fdfaf8]" />
+              <span>Check Status (سٹیٹس چیک کریں)</span>
+            </button>
+
             {settings.phoneNumber && (
               <a
                 href={`tel:${settings.phoneNumber}`}
@@ -111,9 +126,19 @@ export const Header: React.FC<HeaderProps> = ({ settings, onOpenAdmin, isAdminOp
             </p>
           </div>
 
-          <div className="mt-4 flex items-center justify-center gap-2 text-xs text-[#8d7b6d]">
-            <ShieldCheck className="w-4 h-4 text-[#a67c52]" />
-            <span>Fast & Resolution-Oriented Customer Care Support</span>
+          <div className="mt-4 flex flex-col sm:flex-row items-center justify-center gap-3 text-xs text-[#8d7b6d]">
+            <button
+              onClick={onOpenCheckStatus}
+              className="w-full sm:w-auto px-5 py-2.5 bg-[#6d4c41] hover:bg-[#5d4037] text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-md transition-all hover:scale-[1.02] cursor-pointer border border-[#8d6e63]"
+            >
+              <Search className="w-4 h-4 text-amber-300" />
+              <span>🔍 Check Complaint Status (اپنی شکایت کا سٹیٹس معلوم کریں)</span>
+            </button>
+
+            <div className="flex items-center gap-1.5 text-xs text-[#8d7b6d]">
+              <ShieldCheck className="w-4 h-4 text-[#a67c52]" />
+              <span>Fast Customer Care Support</span>
+            </div>
           </div>
         </div>
       </div>
